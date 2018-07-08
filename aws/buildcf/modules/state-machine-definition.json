@@ -1,0 +1,63 @@
+{
+  "Comment": "Orchestrate builds for a commit.",
+  "StartAt": "Main",
+  "States": {
+    "Main": {
+      "Type": "Task",
+      "Resource": "${StepLambda.Arn}",
+      "Next": "CheckRunning",
+      "Catch": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "ResultPath": "$.errorInfo",
+          "Next": "ToTaskError"
+        }
+      ]
+    },
+    "CheckRunning": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.isRunning",
+          "BooleanEquals": true,
+          "Next": "Wait"
+        }
+      ],
+      "Default": "ToTaskEnd"
+    },
+    "Wait": {
+      "Type": "Wait",
+      "SecondsPath": "$.waitSeconds",
+      "Next": "Main"
+    },
+    "ToTaskError": {
+      "Type": "Pass",
+      "Result": "RunError",
+      "ResultPath": "$.runTask",
+      "Next": "TaskEnd"
+    },
+    "ToTaskEnd": {
+      "Type": "Pass",
+      "Result": "RunEnd",
+      "ResultPath": "$.runTask",
+      "Next": "TaskEnd"
+    },
+    "TaskEnd": {
+      "Type": "Task",
+      "Resource": "${StepLambda.Arn}",
+      "End": true,
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "States.ALL"
+          ],
+          "IntervalSeconds": 3,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ]
+    }
+  }
+}

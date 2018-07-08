@@ -1,0 +1,1541 @@
+Description: The orchestrator stack for CBuildCI.
+Conditions:
+  DoCreateKMSKey: !Equals
+    - !Ref 'SecretsKMSArn'
+    - -CREATE-
+  UseDefaultAliasName: !Equals
+    - !Ref 'SecretsKMSAlias'
+    - -DEFAULT-
+  HasKMSUserArns: !Not
+    - !Equals
+      - !Ref 'SecretsKMSUserArns'
+      - -NONE-
+  DoCreateConfigTable: !Equals
+    - !Ref 'CreateConfigTable'
+    - 'true'
+  DoCreateLocksTable: !Equals
+    - !Ref 'CreateLocksTable'
+    - 'true'
+  DoCreateSessionsTable: !Equals
+    - !Ref 'CreateSessionsTable'
+    - 'true'
+  DoCreateExecutionsTable: !Equals
+    - !Ref 'CreateExecutionsTable'
+    - 'true'
+  HasTag1: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag1Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag1Value'
+        - -NONE-
+  HasTag2: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag2Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag2Value'
+        - -NONE-
+  HasTag3: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag3Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag3Value'
+        - -NONE-
+  HasTag4: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag4Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag4Value'
+        - -NONE-
+  HasTag5: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag5Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag5Value'
+        - -NONE-
+  HasTag6: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag6Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag6Value'
+        - -NONE-
+  HasTag7: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag7Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag7Value'
+        - -NONE-
+  HasTag8: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag8Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag8Value'
+        - -NONE-
+  HasTag9: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag9Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag9Value'
+        - -NONE-
+  HasTag10: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag10Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag10Value'
+        - -NONE-
+  HasTags: !Or
+    - !Condition 'HasTag1'
+    - !Condition 'HasTag2'
+    - !Condition 'HasTag3'
+    - !Condition 'HasTag4'
+    - !Condition 'HasTag5'
+    - !Condition 'HasTag6'
+    - !Condition 'HasTag7'
+    - !Condition 'HasTag8'
+    - !Condition 'HasTag9'
+    - !Condition 'HasTag10'
+Outputs:
+  SecretsKMSArn:
+    Value: !If
+      - DoCreateKMSKey
+      - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${SecretsKMSKey}'
+      - !Ref 'SecretsKMSArn'
+  SecretsKMSAlias:
+    Value: !If
+      - DoCreateKMSKey
+      - !Ref 'SecretsKMSKeyAlias'
+      - N/A
+  RestApiId:
+    Value: !Ref 'RestApi'
+  BuildStateMachine:
+    Value: !Ref 'BuildStateMachine'
+  WebhookLambda:
+    Value: !Ref 'WebhookLambda'
+  WebhookLambdaRole:
+    Value: !Ref 'WebhookLambdaRole'
+  ApiLambda:
+    Value: !Ref 'ApiLambda'
+  ApiLambdaRole:
+    Value: !Ref 'ApiLambdaRole'
+  StepLambda:
+    Value: !Ref 'StepLambda'
+  StepLambdaRole:
+    Value: !Ref 'StepLambdaRole'
+Parameters:
+  BaseUrl:
+    Description: The base URL of the application, e.g. "https://build.foobar.com/"
+    Type: String
+  SecretsKMSArn:
+    Description: Set to "-CREATE-" (default) to create a new KMS key (default), or
+      enter the ARN of an existing key to use.
+    Type: String
+    Default: -CREATE-
+  SecretsKMSAlias:
+    Description: If SecretsKMSArn is set to "-CREATE-", the alias for KMS key. Defaults
+      to "${AWS::StackName}-kms-key"
+    Type: String
+    Default: -DEFAULT-
+  SecretsKMSUserArns:
+    Description: If SecretsKMSArn is set to "-CREATE-", IAM User or role ARNs will
+      have "user" access to the KMS key.
+    Type: String
+    Default: -NONE-
+  SecretsKMSAdminArns:
+    Description: If SecretsKMSArn is set to "-CREATE-", IAM User or role ARNs will
+      have "admin" access to the KMS key.
+    Type: String
+    Default: -REQUIRED-IF-CREATE-
+  ConfigTableName:
+    Type: String
+  LocksTableName:
+    Type: String
+  SessionsTableName:
+    Type: String
+  ExecutionsTableName:
+    Type: String
+  CreateConfigTable:
+    Description: Set to false if the DynamoDB config table already exists.
+    Type: String
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Default: 'true'
+  CreateLocksTable:
+    Description: Set to false if the DynamoDB locks table already exists.
+    Type: String
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Default: 'true'
+  CreateSessionsTable:
+    Description: Set to false if the DynamoDB sessions table already exists.
+    Type: String
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Default: 'true'
+  CreateExecutionsTable:
+    Description: Set to false if the DynamoDB executions table already exists.
+    Type: String
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Default: 'true'
+  ArtifactBucketName:
+    Type: String
+  AppStaticKeyPrefix:
+    Description: Path prefix where the static UI application resources will be stored.
+    Type: String
+    Default: github-app-static/
+  ArtifactKeyPrefix:
+    Description: Path prefix for storing artifacts in the artifact bucket.
+    Type: String
+    Default: github-artifacts/
+  SourceKeyPrefix:
+    Description: Path prefix for source zips in the artifact bucket.
+    Type: String
+    Default: github-source/
+  ConfigTableRCU:
+    Type: Number
+    Default: '5'
+  ConfigTableWCU:
+    Type: Number
+    Default: '1'
+  LocksTableRCU:
+    Type: Number
+    Default: '5'
+  LocksTableWCU:
+    Type: Number
+    Default: '1'
+  SessionsTableRCU:
+    Type: Number
+    Default: '5'
+  SessionsTableWCU:
+    Type: Number
+    Default: '1'
+  ExecutionsTableRCU:
+    Type: Number
+    Default: '5'
+  ExecutionsTableWCU:
+    Type: Number
+    Default: '1'
+  GitHubUrl:
+    Type: String
+    Default: https://github.com/
+  GitHubApiUrl:
+    Type: String
+    Default: https://api.github.com/
+  GitHubAppId:
+    Description: The client ID number of the GitHub App
+    Type: String
+  GitHubOAuthClientId:
+    Description: The OAuth client ID for the GitHub App.
+    Type: String
+  GitHubClientSecretParamName:
+    Description: SSM parameter that stores the GitHub App OAuth client secret.
+    Type: String
+  GitHubWebhookSecretParamName:
+    Description: SSM parameter that stores the GitHub App webhook secret for HMAC
+      validation.
+    Type: String
+  GitHubAppPrivateKeyParamName:
+    Description: SSM parameter that stores the GitHub App private key.
+    Type: String
+  SessionSecretsParamName:
+    Description: Comma delimited list of secrets used to sign session cookies.
+    Type: String
+  LogsRetentionDays:
+    Description: Number of days to keep CloudWatch logs for this stack's lambda function.
+    Type: Number
+    Default: '30'
+  LambdaZipS3Bucket:
+    Description: S3 bucket name where this stack's lambda code is stored as a zip
+      file.
+    Type: String
+  LambdaZipS3Key:
+    Description: Object key in LambdaZipS3Bucket for this stack's lambda code.
+    Type: String
+  WaitSecondsDefault:
+    Description: Default number of seconds to wait between checking the status of
+      running builds.
+    Type: Number
+    Default: '30'
+    MinValue: 10
+    MaxValue: 120
+  BuildsYmlFile:
+    Description: The path to the file in the repo that contains the build configuration.
+    Type: String
+    Default: .cbuildci.yml
+  Tag1Name:
+    Type: String
+    Default: -NONE-
+  Tag1Value:
+    Type: String
+    Default: -NONE-
+  Tag2Name:
+    Type: String
+    Default: -NONE-
+  Tag2Value:
+    Type: String
+    Default: -NONE-
+  Tag3Name:
+    Type: String
+    Default: -NONE-
+  Tag3Value:
+    Type: String
+    Default: -NONE-
+  Tag4Name:
+    Type: String
+    Default: -NONE-
+  Tag4Value:
+    Type: String
+    Default: -NONE-
+  Tag5Name:
+    Type: String
+    Default: -NONE-
+  Tag5Value:
+    Type: String
+    Default: -NONE-
+  Tag6Name:
+    Type: String
+    Default: -NONE-
+  Tag6Value:
+    Type: String
+    Default: -NONE-
+  Tag7Name:
+    Type: String
+    Default: -NONE-
+  Tag7Value:
+    Type: String
+    Default: -NONE-
+  Tag8Name:
+    Type: String
+    Default: -NONE-
+  Tag8Value:
+    Type: String
+    Default: -NONE-
+  Tag9Name:
+    Type: String
+    Default: -NONE-
+  Tag9Value:
+    Type: String
+    Default: -NONE-
+  Tag10Name:
+    Type: String
+    Default: -NONE-
+  Tag10Value:
+    Type: String
+    Default: -NONE-
+Resources:
+  ConfigDBTable:
+    Properties:
+      TableName: !Ref 'ConfigTableName'
+      KeySchema:
+        - KeyType: HASH
+          AttributeName: id
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      ProvisionedThroughput:
+        ReadCapacityUnits: !Ref 'ConfigTableRCU'
+        WriteCapacityUnits: !Ref 'ConfigTableWCU'
+      Tags: !If
+        - HasTags
+        - - !If
+            - HasTag1
+            - Key: !Ref 'Tag1Name'
+              Value: !Ref 'Tag1Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag2
+            - Key: !Ref 'Tag2Name'
+              Value: !Ref 'Tag2Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag3
+            - Key: !Ref 'Tag3Name'
+              Value: !Ref 'Tag3Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag4
+            - Key: !Ref 'Tag4Name'
+              Value: !Ref 'Tag4Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag5
+            - Key: !Ref 'Tag5Name'
+              Value: !Ref 'Tag5Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag6
+            - Key: !Ref 'Tag6Name'
+              Value: !Ref 'Tag6Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag7
+            - Key: !Ref 'Tag7Name'
+              Value: !Ref 'Tag7Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag8
+            - Key: !Ref 'Tag8Name'
+              Value: !Ref 'Tag8Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag9
+            - Key: !Ref 'Tag9Name'
+              Value: !Ref 'Tag9Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag10
+            - Key: !Ref 'Tag10Name'
+              Value: !Ref 'Tag10Value'
+            - !Ref 'AWS::NoValue'
+        - !Ref 'AWS::NoValue'
+    Type: AWS::DynamoDB::Table
+    Condition: DoCreateConfigTable
+    DeletionPolicy: Retain
+  LocksTable:
+    Properties:
+      TableName: !Ref 'LocksTableName'
+      KeySchema:
+        - KeyType: HASH
+          AttributeName: id
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      ProvisionedThroughput:
+        ReadCapacityUnits: !Ref 'LocksTableRCU'
+        WriteCapacityUnits: !Ref 'LocksTableWCU'
+      Tags: !If
+        - HasTags
+        - - !If
+            - HasTag1
+            - Key: !Ref 'Tag1Name'
+              Value: !Ref 'Tag1Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag2
+            - Key: !Ref 'Tag2Name'
+              Value: !Ref 'Tag2Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag3
+            - Key: !Ref 'Tag3Name'
+              Value: !Ref 'Tag3Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag4
+            - Key: !Ref 'Tag4Name'
+              Value: !Ref 'Tag4Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag5
+            - Key: !Ref 'Tag5Name'
+              Value: !Ref 'Tag5Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag6
+            - Key: !Ref 'Tag6Name'
+              Value: !Ref 'Tag6Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag7
+            - Key: !Ref 'Tag7Name'
+              Value: !Ref 'Tag7Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag8
+            - Key: !Ref 'Tag8Name'
+              Value: !Ref 'Tag8Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag9
+            - Key: !Ref 'Tag9Name'
+              Value: !Ref 'Tag9Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag10
+            - Key: !Ref 'Tag10Name'
+              Value: !Ref 'Tag10Value'
+            - !Ref 'AWS::NoValue'
+        - !Ref 'AWS::NoValue'
+    Type: AWS::DynamoDB::Table
+    Condition: DoCreateLocksTable
+    DeletionPolicy: Retain
+  SessionsTable:
+    Properties:
+      TableName: !Ref 'SessionsTableName'
+      KeySchema:
+        - KeyType: HASH
+          AttributeName: id
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      ProvisionedThroughput:
+        ReadCapacityUnits: !Ref 'SessionsTableRCU'
+        WriteCapacityUnits: !Ref 'SessionsTableWCU'
+      TimeToLiveSpecification:
+        Enabled: 'true'
+        AttributeName: ttlTime
+      Tags: !If
+        - HasTags
+        - - !If
+            - HasTag1
+            - Key: !Ref 'Tag1Name'
+              Value: !Ref 'Tag1Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag2
+            - Key: !Ref 'Tag2Name'
+              Value: !Ref 'Tag2Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag3
+            - Key: !Ref 'Tag3Name'
+              Value: !Ref 'Tag3Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag4
+            - Key: !Ref 'Tag4Name'
+              Value: !Ref 'Tag4Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag5
+            - Key: !Ref 'Tag5Name'
+              Value: !Ref 'Tag5Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag6
+            - Key: !Ref 'Tag6Name'
+              Value: !Ref 'Tag6Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag7
+            - Key: !Ref 'Tag7Name'
+              Value: !Ref 'Tag7Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag8
+            - Key: !Ref 'Tag8Name'
+              Value: !Ref 'Tag8Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag9
+            - Key: !Ref 'Tag9Name'
+              Value: !Ref 'Tag9Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag10
+            - Key: !Ref 'Tag10Name'
+              Value: !Ref 'Tag10Value'
+            - !Ref 'AWS::NoValue'
+        - !Ref 'AWS::NoValue'
+    Type: AWS::DynamoDB::Table
+    Condition: DoCreateSessionsTable
+    DeletionPolicy: Retain
+  ExecutionsTable:
+    Properties:
+      TableName: !Ref 'ExecutionsTableName'
+      KeySchema:
+        - KeyType: HASH
+          AttributeName: repoId
+        - KeyType: RANGE
+          AttributeName: executionId
+      AttributeDefinitions:
+        - AttributeName: repoId
+          AttributeType: S
+        - AttributeName: executionId
+          AttributeType: S
+      ProvisionedThroughput:
+        ReadCapacityUnits: !Ref 'ExecutionsTableRCU'
+        WriteCapacityUnits: !Ref 'ExecutionsTableWCU'
+      Tags: !If
+        - HasTags
+        - - !If
+            - HasTag1
+            - Key: !Ref 'Tag1Name'
+              Value: !Ref 'Tag1Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag2
+            - Key: !Ref 'Tag2Name'
+              Value: !Ref 'Tag2Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag3
+            - Key: !Ref 'Tag3Name'
+              Value: !Ref 'Tag3Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag4
+            - Key: !Ref 'Tag4Name'
+              Value: !Ref 'Tag4Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag5
+            - Key: !Ref 'Tag5Name'
+              Value: !Ref 'Tag5Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag6
+            - Key: !Ref 'Tag6Name'
+              Value: !Ref 'Tag6Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag7
+            - Key: !Ref 'Tag7Name'
+              Value: !Ref 'Tag7Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag8
+            - Key: !Ref 'Tag8Name'
+              Value: !Ref 'Tag8Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag9
+            - Key: !Ref 'Tag9Name'
+              Value: !Ref 'Tag9Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag10
+            - Key: !Ref 'Tag10Name'
+              Value: !Ref 'Tag10Value'
+            - !Ref 'AWS::NoValue'
+        - !Ref 'AWS::NoValue'
+    Type: AWS::DynamoDB::Table
+    Condition: DoCreateExecutionsTable
+    DeletionPolicy: Retain
+  WebhookLambdaRole:
+    Properties:
+      Path: /service-role/
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyName: lambda-policy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ConfigTableName}'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${LocksTableName}'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ExecutionsTableName}'
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:BatchGetItem
+              - Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${LocksTableName}'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ExecutionsTableName}'
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+              - Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${GitHubWebhookSecretParamName}'
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${GitHubAppPrivateKeyParamName}'
+                Action:
+                  - ssm:GetParameter
+    Type: AWS::IAM::Role
+  ApiLambdaRole:
+    Properties:
+      Path: /service-role/
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyName: lambda-policy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ConfigTableName}'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${LocksTableName}'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${SessionsTableName}'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ExecutionsTableName}'
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:BatchGetItem
+              - Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${LocksTableName}'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${SessionsTableName}'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ExecutionsTableName}'
+                Action:
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+              - Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${GitHubClientSecretParamName}'
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${SessionSecretsParamName}'
+                Action:
+                  - ssm:GetParameter
+                  - ssm:PutParameter
+              - Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${GitHubWebhookSecretParamName}'
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${GitHubAppPrivateKeyParamName}'
+                Action:
+                  - ssm:PutParameter
+    Type: AWS::IAM::Role
+  StepLambdaRole:
+    Properties:
+      Path: /service-role/
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+      Policies:
+        - PolicyName: lambda-policy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${LocksTableName}'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ExecutionsTableName}'
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:BatchGetItem
+              - Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${LocksTableName}'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ExecutionsTableName}'
+                Action:
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+              - Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:s3:::${ArtifactBucketName}/*'
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:PutObject
+              - Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${GitHubAppPrivateKeyParamName}'
+                Action:
+                  - ssm:GetParameter
+    Type: AWS::IAM::Role
+  SecretsKMSKey:
+    Properties:
+      Description: !Sub 'Encrypts secrets (e.g. private keys) for the CBuildCI stack
+        "${AWS::StackName}"'
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - !If
+            - HasKMSUserArns
+            - Sid: Allow use of the key
+              Effect: Allow
+              Resource:
+                - '*'
+              Principal:
+                AWS: !Split
+                  - ','
+                  - !Ref 'SecretsKMSUserArns'
+              Action:
+                - kms:Encrypt
+                - kms:Decrypt
+                - kms:ReEncrypt
+                - kms:GenerateDataKey
+                - kms:GenerateDataKeyWithoutPlaintext
+                - kms:DescribeKey
+            - !Ref 'AWS::NoValue'
+          - Sid: Allow access for Key Administrators
+            Effect: Allow
+            Resource:
+              - '*'
+            Principal:
+              AWS: !Split
+                - ','
+                - !Ref 'SecretsKMSAdminArns'
+            Action:
+              - kms:Create*
+              - kms:Describe*
+              - kms:Enable*
+              - kms:List*
+              - kms:Put*
+              - kms:Update*
+              - kms:Revoke*
+              - kms:Disable*
+              - kms:Get*
+              - kms:Delete*
+              - kms:TagResource
+              - kms:UntagResource
+              - kms:ScheduleKeyDeletion
+              - kms:CancelKeyDeletion
+          - Sid: Grant actions to WebhookLambda
+            Effect: Allow
+            Resource:
+              - '*'
+            Principal:
+              AWS: !GetAtt 'WebhookLambdaRole.Arn'
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+          - Sid: Grant actions to StepLambda
+            Effect: Allow
+            Resource:
+              - '*'
+            Principal:
+              AWS: !GetAtt 'StepLambdaRole.Arn'
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+          - Sid: Grant actions to ApiLambda
+            Effect: Allow
+            Resource:
+              - '*'
+            Principal:
+              AWS: !GetAtt 'ApiLambdaRole.Arn'
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+      Tags: !If
+        - HasTags
+        - - !If
+            - HasTag1
+            - Key: !Ref 'Tag1Name'
+              Value: !Ref 'Tag1Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag2
+            - Key: !Ref 'Tag2Name'
+              Value: !Ref 'Tag2Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag3
+            - Key: !Ref 'Tag3Name'
+              Value: !Ref 'Tag3Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag4
+            - Key: !Ref 'Tag4Name'
+              Value: !Ref 'Tag4Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag5
+            - Key: !Ref 'Tag5Name'
+              Value: !Ref 'Tag5Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag6
+            - Key: !Ref 'Tag6Name'
+              Value: !Ref 'Tag6Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag7
+            - Key: !Ref 'Tag7Name'
+              Value: !Ref 'Tag7Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag8
+            - Key: !Ref 'Tag8Name'
+              Value: !Ref 'Tag8Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag9
+            - Key: !Ref 'Tag9Name'
+              Value: !Ref 'Tag9Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag10
+            - Key: !Ref 'Tag10Name'
+              Value: !Ref 'Tag10Value'
+            - !Ref 'AWS::NoValue'
+        - !Ref 'AWS::NoValue'
+    Type: AWS::KMS::Key
+    Condition: DoCreateKMSKey
+    DeletionPolicy: Retain
+  SecretsKMSKeyAlias:
+    Properties:
+      AliasName: !If
+        - UseDefaultAliasName
+        - !Sub 'alias/${AWS::StackName}-kms-key'
+        - !Sub 'alias/${SecretsKMSAlias}'
+      TargetKeyId: !Ref 'SecretsKMSKey'
+    Type: AWS::KMS::Alias
+    Condition: DoCreateKMSKey
+  WebhookLambdaRoleKMSPolicy:
+    Properties:
+      Roles:
+        - !Ref 'WebhookLambdaRole'
+      PolicyName: !Sub 'WebhookLambdaRole-kms'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Resource:
+              - !If
+                - DoCreateKMSKey
+                - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${SecretsKMSKey}'
+                - !Ref 'SecretsKMSArn'
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+    Type: AWS::IAM::Policy
+  StepLambdaRoleKMSPolicy:
+    Properties:
+      Roles:
+        - !Ref 'StepLambdaRole'
+      PolicyName: !Sub 'WebhookLambdaRole-kms'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Resource:
+              - !If
+                - DoCreateKMSKey
+                - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${SecretsKMSKey}'
+                - !Ref 'SecretsKMSArn'
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+    Type: AWS::IAM::Policy
+  ApiLambdaRoleKMSPolicy:
+    Properties:
+      Roles:
+        - !Ref 'ApiLambdaRole'
+      PolicyName: !Sub 'WebhookLambdaRole-kms'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Resource:
+              - !If
+                - DoCreateKMSKey
+                - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${SecretsKMSKey}'
+                - !Ref 'SecretsKMSArn'
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+    Type: AWS::IAM::Policy
+  WebhookLambda:
+    Properties:
+      Description: Handles webhook API requests
+      Code:
+        S3Bucket: !Ref 'LambdaZipS3Bucket'
+        S3Key: !Ref 'LambdaZipS3Key'
+      Handler: src/lambda/webhook/index.handler
+      MemorySize: 128
+      Role: !GetAtt 'WebhookLambdaRole.Arn'
+      Runtime: nodejs8.10
+      Timeout: 60
+      Environment:
+        Variables:
+          BUILDS_YML_FILE: !Ref 'BuildsYmlFile'
+          BASE_URL: !Ref 'BaseUrl'
+          TABLE_CONFIG_NAME: !Ref 'ConfigTableName'
+          TABLE_LOCKS_NAME: !Ref 'LocksTableName'
+          TABLE_SESSIONS_NAME: !Ref 'SessionsTableName'
+          TABLE_EXECUTIONS_NAME: !Ref 'ExecutionsTableName'
+          STATE_MACHINE_ARN: !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${AWS::StackName}-statemachine'
+          STATE_MACHINE_WAIT_SECONDS_DEFAULT: !Ref 'WaitSecondsDefault'
+          SOURCE_S3_BUCKET_DEFAULT: !Ref 'ArtifactBucketName'
+          SOURCE_S3_KEY_PREFIX_DEFAULT: !Sub '${SourceKeyPrefix}{GitHubDomain}/{GitHubUser}/{GitHubRepo}/'
+          ARTIFACT_S3_BUCKET_DEFAULT: !Ref 'ArtifactBucketName'
+          ARTIFACT_S3_KEY_PREFIX_DEFAULT: !Sub '${ArtifactKeyPrefix}{GitHubDomain}/{GitHubUser}/{GitHubRepo}/'
+          GH_URL: !Ref 'GitHubUrl'
+          GH_API_URL: !Ref 'GitHubApiUrl'
+          GH_APP_ID: !Ref 'GitHubAppId'
+          GH_APP_CLIENT_ID: !Ref 'GitHubOAuthClientId'
+          GH_APP_CLIENT_SECRET_PARAM_NAME: !Ref 'GitHubClientSecretParamName'
+          GH_APP_HMAC_SECRET_PARAM_NAME: !Ref 'GitHubWebhookSecretParamName'
+          GH_APP_PRIVATE_KEY_PARAM_NAME: !Ref 'GitHubAppPrivateKeyParamName'
+          SESSION_SECRETS_PARAM_NAME: !Ref 'SessionSecretsParamName'
+          SECRETS_KMS_ARN: !If
+            - DoCreateKMSKey
+            - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${SecretsKMSKey}'
+            - !Ref 'SecretsKMSArn'
+      Tags: !If
+        - HasTags
+        - - !If
+            - HasTag1
+            - Key: !Ref 'Tag1Name'
+              Value: !Ref 'Tag1Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag2
+            - Key: !Ref 'Tag2Name'
+              Value: !Ref 'Tag2Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag3
+            - Key: !Ref 'Tag3Name'
+              Value: !Ref 'Tag3Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag4
+            - Key: !Ref 'Tag4Name'
+              Value: !Ref 'Tag4Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag5
+            - Key: !Ref 'Tag5Name'
+              Value: !Ref 'Tag5Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag6
+            - Key: !Ref 'Tag6Name'
+              Value: !Ref 'Tag6Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag7
+            - Key: !Ref 'Tag7Name'
+              Value: !Ref 'Tag7Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag8
+            - Key: !Ref 'Tag8Name'
+              Value: !Ref 'Tag8Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag9
+            - Key: !Ref 'Tag9Name'
+              Value: !Ref 'Tag9Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag10
+            - Key: !Ref 'Tag10Name'
+              Value: !Ref 'Tag10Value'
+            - !Ref 'AWS::NoValue'
+        - !Ref 'AWS::NoValue'
+    Type: AWS::Lambda::Function
+  ApiLambda:
+    Properties:
+      Description: Handles general API requests
+      Code:
+        S3Bucket: !Ref 'LambdaZipS3Bucket'
+        S3Key: !Ref 'LambdaZipS3Key'
+      Handler: src/lambda/api/index.handler
+      MemorySize: 128
+      Role: !GetAtt 'ApiLambdaRole.Arn'
+      Runtime: nodejs8.10
+      Timeout: 60
+      Environment:
+        Variables:
+          BUILDS_YML_FILE: !Ref 'BuildsYmlFile'
+          BASE_URL: !Ref 'BaseUrl'
+          TABLE_CONFIG_NAME: !Ref 'ConfigTableName'
+          TABLE_LOCKS_NAME: !Ref 'LocksTableName'
+          TABLE_SESSIONS_NAME: !Ref 'SessionsTableName'
+          TABLE_EXECUTIONS_NAME: !Ref 'ExecutionsTableName'
+          STATE_MACHINE_ARN: !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${AWS::StackName}-statemachine'
+          STATE_MACHINE_WAIT_SECONDS_DEFAULT: !Ref 'WaitSecondsDefault'
+          SOURCE_S3_BUCKET_DEFAULT: !Ref 'ArtifactBucketName'
+          SOURCE_S3_KEY_PREFIX_DEFAULT: !Sub '${SourceKeyPrefix}{GitHubDomain}/{GitHubUser}/{GitHubRepo}/'
+          ARTIFACT_S3_BUCKET_DEFAULT: !Ref 'ArtifactBucketName'
+          ARTIFACT_S3_KEY_PREFIX_DEFAULT: !Sub '${ArtifactKeyPrefix}{GitHubDomain}/{GitHubUser}/{GitHubRepo}/'
+          GH_URL: !Ref 'GitHubUrl'
+          GH_API_URL: !Ref 'GitHubApiUrl'
+          GH_APP_ID: !Ref 'GitHubAppId'
+          GH_APP_CLIENT_ID: !Ref 'GitHubOAuthClientId'
+          GH_APP_CLIENT_SECRET_PARAM_NAME: !Ref 'GitHubClientSecretParamName'
+          GH_APP_HMAC_SECRET_PARAM_NAME: !Ref 'GitHubWebhookSecretParamName'
+          GH_APP_PRIVATE_KEY_PARAM_NAME: !Ref 'GitHubAppPrivateKeyParamName'
+          SESSION_SECRETS_PARAM_NAME: !Ref 'SessionSecretsParamName'
+          SECRETS_KMS_ARN: !If
+            - DoCreateKMSKey
+            - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${SecretsKMSKey}'
+            - !Ref 'SecretsKMSArn'
+      Tags: !If
+        - HasTags
+        - - !If
+            - HasTag1
+            - Key: !Ref 'Tag1Name'
+              Value: !Ref 'Tag1Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag2
+            - Key: !Ref 'Tag2Name'
+              Value: !Ref 'Tag2Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag3
+            - Key: !Ref 'Tag3Name'
+              Value: !Ref 'Tag3Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag4
+            - Key: !Ref 'Tag4Name'
+              Value: !Ref 'Tag4Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag5
+            - Key: !Ref 'Tag5Name'
+              Value: !Ref 'Tag5Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag6
+            - Key: !Ref 'Tag6Name'
+              Value: !Ref 'Tag6Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag7
+            - Key: !Ref 'Tag7Name'
+              Value: !Ref 'Tag7Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag8
+            - Key: !Ref 'Tag8Name'
+              Value: !Ref 'Tag8Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag9
+            - Key: !Ref 'Tag9Name'
+              Value: !Ref 'Tag9Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag10
+            - Key: !Ref 'Tag10Name'
+              Value: !Ref 'Tag10Value'
+            - !Ref 'AWS::NoValue'
+        - !Ref 'AWS::NoValue'
+    Type: AWS::Lambda::Function
+  StepLambda:
+    Properties:
+      Description: Manages the execution of CodeBuilds for a commit
+      Code:
+        S3Bucket: !Ref 'LambdaZipS3Bucket'
+        S3Key: !Ref 'LambdaZipS3Key'
+      Handler: src/lambda/execution/index.handler
+      MemorySize: 128
+      Role: !GetAtt 'StepLambdaRole.Arn'
+      Runtime: nodejs8.10
+      Timeout: 60
+      Environment:
+        Variables:
+          BUILDS_YML_FILE: !Ref 'BuildsYmlFile'
+          BASE_URL: !Ref 'BaseUrl'
+          TABLE_CONFIG_NAME: !Ref 'ConfigTableName'
+          TABLE_LOCKS_NAME: !Ref 'LocksTableName'
+          TABLE_SESSIONS_NAME: !Ref 'SessionsTableName'
+          TABLE_EXECUTIONS_NAME: !Ref 'ExecutionsTableName'
+          STATE_MACHINE_ARN: !Sub 'arn:aws:states:${AWS::Region}:${AWS::AccountId}:stateMachine:${AWS::StackName}-statemachine'
+          STATE_MACHINE_WAIT_SECONDS_DEFAULT: !Ref 'WaitSecondsDefault'
+          SOURCE_S3_BUCKET_DEFAULT: !Ref 'ArtifactBucketName'
+          SOURCE_S3_KEY_PREFIX_DEFAULT: !Sub '${SourceKeyPrefix}{GitHubDomain}/{GitHubUser}/{GitHubRepo}/'
+          ARTIFACT_S3_BUCKET_DEFAULT: !Ref 'ArtifactBucketName'
+          ARTIFACT_S3_KEY_PREFIX_DEFAULT: !Sub '${ArtifactKeyPrefix}{GitHubDomain}/{GitHubUser}/{GitHubRepo}/'
+          GH_URL: !Ref 'GitHubUrl'
+          GH_API_URL: !Ref 'GitHubApiUrl'
+          GH_APP_ID: !Ref 'GitHubAppId'
+          GH_APP_CLIENT_ID: !Ref 'GitHubOAuthClientId'
+          GH_APP_CLIENT_SECRET_PARAM_NAME: !Ref 'GitHubClientSecretParamName'
+          GH_APP_HMAC_SECRET_PARAM_NAME: !Ref 'GitHubWebhookSecretParamName'
+          GH_APP_PRIVATE_KEY_PARAM_NAME: !Ref 'GitHubAppPrivateKeyParamName'
+          SESSION_SECRETS_PARAM_NAME: !Ref 'SessionSecretsParamName'
+          SECRETS_KMS_ARN: !If
+            - DoCreateKMSKey
+            - !Sub 'arn:aws:kms:${AWS::Region}:${AWS::AccountId}:key/${SecretsKMSKey}'
+            - !Ref 'SecretsKMSArn'
+      Tags: !If
+        - HasTags
+        - - !If
+            - HasTag1
+            - Key: !Ref 'Tag1Name'
+              Value: !Ref 'Tag1Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag2
+            - Key: !Ref 'Tag2Name'
+              Value: !Ref 'Tag2Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag3
+            - Key: !Ref 'Tag3Name'
+              Value: !Ref 'Tag3Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag4
+            - Key: !Ref 'Tag4Name'
+              Value: !Ref 'Tag4Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag5
+            - Key: !Ref 'Tag5Name'
+              Value: !Ref 'Tag5Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag6
+            - Key: !Ref 'Tag6Name'
+              Value: !Ref 'Tag6Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag7
+            - Key: !Ref 'Tag7Name'
+              Value: !Ref 'Tag7Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag8
+            - Key: !Ref 'Tag8Name'
+              Value: !Ref 'Tag8Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag9
+            - Key: !Ref 'Tag9Name'
+              Value: !Ref 'Tag9Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag10
+            - Key: !Ref 'Tag10Name'
+              Value: !Ref 'Tag10Value'
+            - !Ref 'AWS::NoValue'
+        - !Ref 'AWS::NoValue'
+    Type: AWS::Lambda::Function
+  WebhookLambdaLogGroup:
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${WebhookLambda}'
+      RetentionInDays: !Ref 'LogsRetentionDays'
+    Type: AWS::Logs::LogGroup
+  WebhookLambdaLogGroupPolicy:
+    Properties:
+      Roles:
+        - !Ref 'WebhookLambdaRole'
+      PolicyName: !Sub '${WebhookLambdaRole}-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Resource:
+              - !GetAtt 'WebhookLambdaLogGroup.Arn'
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+    Type: AWS::IAM::Policy
+  ApiLambdaLogGroup:
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${ApiLambda}'
+      RetentionInDays: !Ref 'LogsRetentionDays'
+    Type: AWS::Logs::LogGroup
+  ApiLambdaLogGroupPolicy:
+    Properties:
+      Roles:
+        - !Ref 'ApiLambdaRole'
+      PolicyName: !Sub '${ApiLambdaRole}-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Resource:
+              - !GetAtt 'ApiLambdaLogGroup.Arn'
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+    Type: AWS::IAM::Policy
+  StepLambdaLogGroup:
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${StepLambda}'
+      RetentionInDays: !Ref 'LogsRetentionDays'
+    Type: AWS::Logs::LogGroup
+  StepLambdaLogGroupPolicy:
+    Properties:
+      Roles:
+        - !Ref 'StepLambdaRole'
+      PolicyName: !Sub '${StepLambdaRole}-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Resource:
+              - !GetAtt 'StepLambdaLogGroup.Arn'
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+    Type: AWS::IAM::Policy
+  StateMachineExecutionRole:
+    Properties:
+      Path: /service-role/
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Principal:
+              Service: !Sub 'states.${AWS::Region}.amazonaws.com'
+      Policies:
+        - PolicyName: states-execution-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Resource:
+                  - !GetAtt 'StepLambda.Arn'
+                Action:
+                  - lambda:InvokeFunction
+    Type: AWS::IAM::Role
+  BuildStateMachine:
+    Properties:
+      StateMachineName: !Sub '${AWS::StackName}-statemachine'
+      RoleArn: !GetAtt 'StateMachineExecutionRole.Arn'
+      DefinitionString: !Sub |
+        {
+          "Comment": "Orchestrate builds for a commit.",
+          "StartAt": "Main",
+          "States": {
+            "Main": {
+              "Type": "Task",
+              "Resource": "${StepLambda.Arn}",
+              "Next": "CheckRunning",
+              "Catch": [
+                {
+                  "ErrorEquals": [
+                    "States.ALL"
+                  ],
+                  "ResultPath": "$.errorInfo",
+                  "Next": "ToTaskError"
+                }
+              ]
+            },
+            "CheckRunning": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.isRunning",
+                  "BooleanEquals": true,
+                  "Next": "Wait"
+                }
+              ],
+              "Default": "ToTaskEnd"
+            },
+            "Wait": {
+              "Type": "Wait",
+              "SecondsPath": "$.waitSeconds",
+              "Next": "Main"
+            },
+            "ToTaskError": {
+              "Type": "Pass",
+              "Result": "RunError",
+              "ResultPath": "$.runTask",
+              "Next": "TaskEnd"
+            },
+            "ToTaskEnd": {
+              "Type": "Pass",
+              "Result": "RunEnd",
+              "ResultPath": "$.runTask",
+              "Next": "TaskEnd"
+            },
+            "TaskEnd": {
+              "Type": "Task",
+              "Resource": "${StepLambda.Arn}",
+              "End": true,
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "States.ALL"
+                  ],
+                  "IntervalSeconds": 3,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ]
+            }
+          }
+        }
+    Type: AWS::StepFunctions::StateMachine
+  StepLambdaStateMachinePolicy:
+    Properties:
+      Roles:
+        - !Ref 'WebhookLambdaRole'
+        - !Ref 'ApiLambdaRole'
+      PolicyName: !Sub '${BuildStateMachine.Name}-policy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Resource:
+              - !Ref 'BuildStateMachine'
+            Action:
+              - states:StartExecution
+    Type: AWS::IAM::Policy
+  ApiGatewayAppStaticS3Role:
+    Properties:
+      Path: /service-role/
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Principal:
+              Service: apigateway.amazonaws.com
+      Policies:
+        - PolicyName: s3-read-static-resources-policy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:s3:::${ArtifactBucketName}/${AppStaticKeyPrefix}*'
+                Action:
+                  - s3:GetObject
+    Type: AWS::IAM::Role
+  RestApi:
+    Properties:
+      Name: !Sub '${AWS::StackName}-api'
+    Type: AWS::ApiGateway::RestApi
+    DependsOn:
+      - ApiLambda
+      - ApiGatewayAppStaticS3Role
+      - WebhookLambda
+  AppGetMethod:
+    Properties:
+      RestApiId: !Ref 'RestApi'
+      ResourceId: !GetAtt 'RestApi.RootResourceId'
+      HttpMethod: GET
+      AuthorizationType: NONE
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Content-Type: true
+      Integration:
+        Type: AWS
+        Credentials: !GetAtt 'ApiGatewayAppStaticS3Role.Arn'
+        IntegrationHttpMethod: GET
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:s3:path/${ArtifactBucketName}/${AppStaticKeyPrefix}index.html'
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Content-Type: integration.response.header.Content-Type
+    Type: AWS::ApiGateway::Method
+  AppResource:
+    Properties:
+      RestApiId: !Ref 'RestApi'
+      PathPart: static
+      ParentId: !GetAtt 'RestApi.RootResourceId'
+    Type: AWS::ApiGateway::Resource
+  AppProxyResource:
+    Properties:
+      RestApiId: !Ref 'RestApi'
+      PathPart: '{item}'
+      ParentId: !Ref 'AppResource'
+    Type: AWS::ApiGateway::Resource
+  AppProxyMethod:
+    Properties:
+      RestApiId: !Ref 'RestApi'
+      ResourceId: !Ref 'AppProxyResource'
+      HttpMethod: GET
+      AuthorizationType: NONE
+      RequestParameters:
+        method.request.path.item: true
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Content-Type: true
+      Integration:
+        Type: AWS
+        Credentials: !GetAtt 'ApiGatewayAppStaticS3Role.Arn'
+        IntegrationHttpMethod: GET
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:s3:path/${ArtifactBucketName}/${AppStaticKeyPrefix}{object}'
+        RequestParameters:
+          integration.request.path.object: method.request.path.item
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Content-Type: integration.response.header.Content-Type
+    Type: AWS::ApiGateway::Method
+  WebhookResource:
+    Properties:
+      RestApiId: !Ref 'RestApi'
+      PathPart: webhook
+      ParentId: !GetAtt 'RestApi.RootResourceId'
+    Type: AWS::ApiGateway::Resource
+  WebhookProxyResource:
+    Properties:
+      RestApiId: !Ref 'RestApi'
+      PathPart: '{proxy+}'
+      ParentId: !Ref 'WebhookResource'
+    Type: AWS::ApiGateway::Resource
+  WebhookProxyMethod:
+    Properties:
+      RestApiId: !Ref 'RestApi'
+      ResourceId: !Ref 'WebhookProxyResource'
+      HttpMethod: ANY
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${WebhookLambda.Arn}/invocations'
+        IntegrationResponses:
+          - StatusCode: '200'
+    Type: AWS::ApiGateway::Method
+  WebhookLambdaInvokePermission:
+    Properties:
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      FunctionName: !GetAtt 'WebhookLambda.Arn'
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApi}/*/*/webhook/*'
+    Type: AWS::Lambda::Permission
+  ApiResource:
+    Properties:
+      RestApiId: !Ref 'RestApi'
+      PathPart: api
+      ParentId: !GetAtt 'RestApi.RootResourceId'
+    Type: AWS::ApiGateway::Resource
+  ApiProxyResource:
+    Properties:
+      RestApiId: !Ref 'RestApi'
+      PathPart: '{proxy+}'
+      ParentId: !Ref 'ApiResource'
+    Type: AWS::ApiGateway::Resource
+  ApiProxyMethod:
+    Properties:
+      RestApiId: !Ref 'RestApi'
+      ResourceId: !Ref 'ApiProxyResource'
+      HttpMethod: ANY
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ApiLambda.Arn}/invocations'
+        IntegrationResponses:
+          - StatusCode: '200'
+    Type: AWS::ApiGateway::Method
+  ApiLambdaInvokePermission:
+    Properties:
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      FunctionName: !GetAtt 'ApiLambda.Arn'
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApi}/*/*/api/*'
+    Type: AWS::Lambda::Permission

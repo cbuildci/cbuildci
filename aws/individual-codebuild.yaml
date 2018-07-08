@@ -1,0 +1,436 @@
+Description: The individual CodeBuild stack for CBuildCI.
+Conditions:
+  HasCodeBuildRolePolicyArns: !Not
+    - !Equals
+      - !Ref 'CodeBuildRolePolicyArns'
+      - -NONE-
+  HasReadECRArns: !Not
+    - !Equals
+      - !Ref 'ReadECRArns'
+      - -NONE-
+  HasReadS3Arns: !Not
+    - !Equals
+      - !Ref 'ReadS3Arns'
+      - -NONE-
+  HasReadSSMParamArns: !Not
+    - !Equals
+      - !Ref 'ReadSSMParamArns'
+      - -NONE-
+  HasReadKMSArns: !Not
+    - !Equals
+      - !Ref 'ReadKMSArns'
+      - -NONE-
+  HasVPC: !Not
+    - !Equals
+      - !Ref 'VPC'
+      - -NONE-
+  HasTag1: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag1Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag1Value'
+        - -NONE-
+  HasTag2: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag2Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag2Value'
+        - -NONE-
+  HasTag3: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag3Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag3Value'
+        - -NONE-
+  HasTag4: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag4Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag4Value'
+        - -NONE-
+  HasTag5: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag5Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag5Value'
+        - -NONE-
+  HasTag6: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag6Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag6Value'
+        - -NONE-
+  HasTag7: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag7Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag7Value'
+        - -NONE-
+  HasTag8: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag8Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag8Value'
+        - -NONE-
+  HasTag9: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag9Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag9Value'
+        - -NONE-
+  HasTag10: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag10Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag10Value'
+        - -NONE-
+  HasTags: !Or
+    - !Condition 'HasTag1'
+    - !Condition 'HasTag2'
+    - !Condition 'HasTag3'
+    - !Condition 'HasTag4'
+    - !Condition 'HasTag5'
+    - !Condition 'HasTag6'
+    - !Condition 'HasTag7'
+    - !Condition 'HasTag8'
+    - !Condition 'HasTag9'
+    - !Condition 'HasTag10'
+Outputs:
+  CodeBuildProjectName:
+    Value: !Ref 'CodeBuild'
+  CodeBuildArn:
+    Value: !GetAtt 'CodeBuild.Arn'
+Parameters:
+  BuildDescription:
+    Description: Used for the CodeBuild project description.
+    Type: String
+  ApiLambdaRole:
+    Description: The IAM role used by the API lambda function, which will receive
+      permission to monitor builds.
+    Type: String
+  StepLambdaRole:
+    Description: The IAM role used by the lambda function, which will receive permission
+      to start, stop and monitor builds.
+    Type: String
+  SourceBucket:
+    Type: String
+  SourceKeyPrefix:
+    Type: String
+    Default: github-source/
+  ArtifactBucket:
+    Type: String
+  ArtifactKeyPrefix:
+    Type: String
+    Default: github-artifacts/
+  LogsRetentionDays:
+    Description: Number of days to keep CloudWatch logs for this stack's lambda function.
+    Type: Number
+    Default: '30'
+  CodeBuildRolePolicyArns:
+    Description: Optional list of IAM managed policy ARNs to attach to the CodeBuild
+      role.
+    Type: String
+    Default: -NONE-
+  ReadECRArns:
+    Description: ECS Repository ARNs to give CodeBuild permission to pull images from.
+    Type: String
+    Default: -NONE-
+  ReadS3Arns:
+    Description: S3 ARNs to give CodeBuild permission to S3.
+    Type: String
+    Default: -NONE-
+  ReadSSMParamArns:
+    Description: SSM parameters to give CodeBuild permission to read.
+    Type: String
+    Default: -NONE-
+  ReadKMSArns:
+    Description: KMS keys to give CodeBuild permission to decrypt.
+    Type: String
+    Default: -NONE-
+  VPC:
+    Description: Optional VPC to use for CodeBuild.
+    Type: String
+    Default: -NONE-
+  SecurityGroups:
+    Description: Security groups to use for CodeBuild.
+    Type: String
+    Default: -NONE-
+  Subnets:
+    Description: Subnets to use for CodeBuild.
+    Type: String
+    Default: -NONE-
+  Tag1Name:
+    Type: String
+    Default: -NONE-
+  Tag1Value:
+    Type: String
+    Default: -NONE-
+  Tag2Name:
+    Type: String
+    Default: -NONE-
+  Tag2Value:
+    Type: String
+    Default: -NONE-
+  Tag3Name:
+    Type: String
+    Default: -NONE-
+  Tag3Value:
+    Type: String
+    Default: -NONE-
+  Tag4Name:
+    Type: String
+    Default: -NONE-
+  Tag4Value:
+    Type: String
+    Default: -NONE-
+  Tag5Name:
+    Type: String
+    Default: -NONE-
+  Tag5Value:
+    Type: String
+    Default: -NONE-
+  Tag6Name:
+    Type: String
+    Default: -NONE-
+  Tag6Value:
+    Type: String
+    Default: -NONE-
+  Tag7Name:
+    Type: String
+    Default: -NONE-
+  Tag7Value:
+    Type: String
+    Default: -NONE-
+  Tag8Name:
+    Type: String
+    Default: -NONE-
+  Tag8Value:
+    Type: String
+    Default: -NONE-
+  Tag9Name:
+    Type: String
+    Default: -NONE-
+  Tag9Value:
+    Type: String
+    Default: -NONE-
+  Tag10Name:
+    Type: String
+    Default: -NONE-
+  Tag10Value:
+    Type: String
+    Default: -NONE-
+Resources:
+  CodeBuildLogGroup:
+    Properties:
+      LogGroupName: !Sub '/aws/codebuild/${AWS::StackName}'
+      RetentionInDays: !Ref 'LogsRetentionDays'
+    Type: AWS::Logs::LogGroup
+  CodeBuildRole:
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+      ManagedPolicyArns: !If
+        - HasCodeBuildRolePolicyArns
+        - !Split
+          - ','
+          - !Ref 'CodeBuildRolePolicyArns'
+        - !Ref 'AWS::NoValue'
+      Policies:
+        - PolicyName: code-build-policy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Resource:
+                  - !GetAtt 'CodeBuildLogGroup.Arn'
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+              - Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:s3:::${SourceBucket}/${SourceKeyPrefix}*'
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+              - Effect: Allow
+                Resource:
+                  - !Sub 'arn:aws:s3:::${ArtifactBucket}/${ArtifactKeyPrefix}*'
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:PutObject
+              - !If
+                - HasReadECRArns
+                - Effect: Allow
+                  Resource: !Split
+                    - ','
+                    - !Ref 'ReadECRArns'
+                  Action:
+                    - ecr:BatchCheckLayerAvailability
+                    - ecr:BatchGetImage
+                    - ecr:GetDownloadUrlForLayer
+                - !Ref 'AWS::NoValue'
+              - !If
+                - HasReadS3Arns
+                - Effect: Allow
+                  Resource: !Split
+                    - ','
+                    - !Ref 'ReadS3Arns'
+                  Action:
+                    - s3:ListBucket
+                    - s3:GetObject
+                    - s3:GetObject
+                    - s3:GetObjectVersion
+                - !Ref 'AWS::NoValue'
+              - !If
+                - HasReadSSMParamArns
+                - Effect: Allow
+                  Resource: !Split
+                    - ','
+                    - !Ref 'ReadSSMParamArns'
+                  Action:
+                    - ssm:GetParameter
+                - !Ref 'AWS::NoValue'
+              - !If
+                - HasReadKMSArns
+                - Effect: Allow
+                  Resource: !Split
+                    - ','
+                    - !Ref 'ReadKMSArns'
+                  Action:
+                    - kms:Decrypt
+                - !Ref 'AWS::NoValue'
+    Type: AWS::IAM::Role
+  CodeBuild:
+    Properties:
+      Name: !Ref 'AWS::StackName'
+      Description: !Ref 'BuildDescription'
+      ServiceRole: !Ref 'CodeBuildRole'
+      Source:
+        Type: CODEPIPELINE
+      Artifacts:
+        Type: CODEPIPELINE
+      VpcConfig: !If
+        - HasVPC
+        - VpcId: !Ref 'VPC'
+          Subnets: !Ref 'Subnets'
+          SecurityGroupIds: !Ref 'SecurityGroups'
+        - !Ref 'AWS::NoValue'
+      Environment:
+        Type: LINUX_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/ubuntu-base:14.04
+      Tags: !If
+        - HasTags
+        - - !If
+            - HasTag1
+            - Key: !Ref 'Tag1Name'
+              Value: !Ref 'Tag1Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag2
+            - Key: !Ref 'Tag2Name'
+              Value: !Ref 'Tag2Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag3
+            - Key: !Ref 'Tag3Name'
+              Value: !Ref 'Tag3Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag4
+            - Key: !Ref 'Tag4Name'
+              Value: !Ref 'Tag4Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag5
+            - Key: !Ref 'Tag5Name'
+              Value: !Ref 'Tag5Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag6
+            - Key: !Ref 'Tag6Name'
+              Value: !Ref 'Tag6Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag7
+            - Key: !Ref 'Tag7Name'
+              Value: !Ref 'Tag7Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag8
+            - Key: !Ref 'Tag8Name'
+              Value: !Ref 'Tag8Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag9
+            - Key: !Ref 'Tag9Name'
+              Value: !Ref 'Tag9Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag10
+            - Key: !Ref 'Tag10Name'
+              Value: !Ref 'Tag10Value'
+            - !Ref 'AWS::NoValue'
+        - !Ref 'AWS::NoValue'
+    Type: AWS::CodeBuild::Project
+  ApiLambdaRolePolicy:
+    Properties:
+      Roles:
+        - !Ref 'ApiLambdaRole'
+      PolicyName: !Sub '${AWS::StackName}-policy'
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Resource:
+              - !GetAtt 'CodeBuild.Arn'
+            Action:
+              - codebuild:BatchGetBuilds
+          - Effect: Allow
+            Resource:
+              - !GetAtt 'CodeBuildLogGroup.Arn'
+            Action:
+              - logs:GetLogEvents
+    Type: AWS::IAM::Policy
+  StepLambdaRolePolicy:
+    Properties:
+      Roles:
+        - !Ref 'StepLambdaRole'
+      PolicyName: !Sub '${AWS::StackName}-policy'
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Resource:
+              - !GetAtt 'CodeBuild.Arn'
+            Action:
+              - codebuild:StartBuild
+              - codebuild:StopBuild
+              - codebuild:BatchGetBuilds
+    Type: AWS::IAM::Policy
