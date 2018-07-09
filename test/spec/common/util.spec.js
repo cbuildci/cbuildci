@@ -17,6 +17,7 @@ describe('util', () => {
             'hasSpecialLabel',
             'escapeRegExp',
             'convertToRegex',
+            'cacheAsyncResult',
         ].sort());
     });
 
@@ -193,6 +194,89 @@ describe('util', () => {
         it('should return null if invalid pattern', () => {
             expect(util.convertToRegex('/+/'))
                 .to.equal(null);
+        });
+    });
+
+    describe('cacheAsyncResult', () => {
+        it('should return a function that is a promise', async () => {
+            let executions = 0;
+            const fn = util.cacheAsyncResult(() => `foo${++executions}`);
+
+            expect(fn)
+                .to.be.a('function');
+
+            expect(await fn()).to.equal('foo1');
+            expect(executions).to.equal(1);
+
+            expect(await fn()).to.equal('foo1');
+            expect(executions).to.equal(1);
+        });
+
+        it('should support numeric getKey to determine cache key', async () => {
+            let executions = 0;
+            const fn = util.cacheAsyncResult((v) => `${v}${++executions}`, { getKey: 0 });
+
+            expect(await fn('a')).to.equal('a1');
+            expect(executions).to.equal(1);
+
+            expect(await fn('a')).to.equal('a1');
+            expect(executions).to.equal(1);
+
+            expect(await fn('b')).to.equal('b2');
+            expect(executions).to.equal(2);
+
+            expect(await fn('b')).to.equal('b2');
+            expect(executions).to.equal(2);
+
+            expect(await fn('a')).to.equal('a1');
+            expect(executions).to.equal(2);
+        });
+
+        it('should support function getKey to determine cache key', async () => {
+            let executions = 0;
+            const fn = util.cacheAsyncResult((v) => `${v}${++executions}`, { getKey: (a, b) => b });
+
+            expect(await fn('a', 'alpha')).to.equal('a1');
+            expect(executions).to.equal(1);
+
+            expect(await fn('a', 'alpha')).to.equal('a1');
+            expect(executions).to.equal(1);
+
+            expect(await fn('foo', 'alpha')).to.equal('a1');
+            expect(executions).to.equal(1);
+
+            expect(await fn('a', 'beta')).to.equal('a2');
+            expect(executions).to.equal(2);
+
+            expect(await fn('a', 'beta')).to.equal('a2');
+            expect(executions).to.equal(2);
+
+            expect(await fn('a', 'alpha')).to.equal('a1');
+            expect(executions).to.equal(2);
+        });
+
+        it('should support expiration', async () => {
+            let executions = 0;
+            const fn = util.cacheAsyncResult(
+                (v) => `${v}${++executions}`,
+                { expirationMs: 10 },
+            );
+
+            expect(await fn('a')).to.equal('a1');
+            expect(executions).to.equal(1);
+
+            expect(await fn('a')).to.equal('a1');
+            expect(executions).to.equal(1);
+
+            await new Promise((resolve) => setTimeout(resolve, 5));
+
+            expect(await fn('a')).to.equal('a1');
+            expect(executions).to.equal(1);
+
+            await new Promise((resolve) => setTimeout(resolve, 10));
+
+            expect(await fn('a')).to.equal('a2');
+            expect(executions).to.equal(2);
         });
     });
 });

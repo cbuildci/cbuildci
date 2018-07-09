@@ -104,3 +104,43 @@ exports.convertToRegex = function convertToRegex(val) {
         return null;
     }
 };
+
+/**
+ * Wrap an async function so its result is cached.
+ *
+ * @param {function} fn
+ * @param {object} [options]
+ * @param {number|function} [options.getKey]
+ * @param {number} [options.expirationMs]
+ * @returns {function}
+ */
+exports.cacheAsyncResult = function cacheAsyncResult(fn, { getKey = null, expirationMs = null } = {}) {
+    let cache = new Map();
+    const keyType = typeof getKey;
+
+    return async function cachedFn(...args) {
+        let key = '';
+        if (keyType === 'number') {
+            key = args[getKey];
+        }
+        else if (keyType === 'function') {
+            key = getKey(...args);
+        }
+
+        const cached = cache.get(key);
+        if (cached && (cached.expires === null || cached.expires > Date.now())) {
+            return cached.value;
+        }
+
+        const value = await fn.apply(this, args);
+
+        cache.set(key, {
+            value,
+            expires: expirationMs != null
+                ? Date.now() + expirationMs
+                : null,
+        });
+
+        return value;
+    };
+};
