@@ -4,6 +4,7 @@ import os
 import sys
 sys.path.insert(0, "./")
 
+from modules.cf_tables import create_template as create_cf_tables
 from modules.cf_orchestrator import create_template as create_cf_orchestrator
 from modules.cf_individual import create_template as create_cf_individual
 
@@ -28,6 +29,11 @@ if not os.path.isdir(output_dir):
     sys.stderr.write("Path specified by outputdir must be a directory")
     exit(1)
 
+tables_out = os.path.normpath(os.path.join(
+    output_dir,
+    "tables.yaml",
+))
+
 orchestrator_out = os.path.normpath(os.path.join(
     output_dir,
     "orchestrator.yaml",
@@ -37,6 +43,14 @@ individual_out = os.path.normpath(os.path.join(
     output_dir,
     "individual-codebuild.yaml",
 ))
+
+print("Building Tables CloudFormation template...")
+t_tables = create_cf_tables()
+
+t_tables_yaml = cfn_flip.to_yaml(
+    t_tables.to_json(sort_keys = False),
+    True,
+)
 
 print("Building Orchestrator CloudFormation template...")
 t_orchestrator = create_cf_orchestrator()
@@ -53,6 +67,10 @@ t_individual_yaml = cfn_flip.to_yaml(
     t_individual.to_json(sort_keys = False),
     True,
 )
+
+with open(tables_out, "w") as stream:
+    stream.write(t_tables_yaml)
+    stream.close()
 
 with open(orchestrator_out, "w") as stream:
     stream.write(t_orchestrator_yaml)

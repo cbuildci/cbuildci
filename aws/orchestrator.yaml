@@ -10,18 +10,6 @@ Conditions:
     - !Equals
       - !Ref 'SecretsKMSUserArns'
       - -NONE-
-  DoCreateConfigTable: !Equals
-    - !Ref 'CreateConfigTable'
-    - 'true'
-  DoCreateLocksTable: !Equals
-    - !Ref 'CreateLocksTable'
-    - 'true'
-  DoCreateSessionsTable: !Equals
-    - !Ref 'CreateSessionsTable'
-    - 'true'
-  DoCreateExecutionsTable: !Equals
-    - !Ref 'CreateExecutionsTable'
-    - 'true'
   HasTag1: !Not
     - !Or
       - !Equals
@@ -142,7 +130,7 @@ Outputs:
     Value: !Ref 'StepLambdaRole'
 Parameters:
   BaseUrl:
-    Description: The base URL of the application, e.g. "https://build.foobar.com/"
+    Description: The base URL of the application, e.g. "https://cbuildci.mycompany.com/"
     Type: String
   SecretsKMSArn:
     Description: Set to "-CREATE-" (default) to create a new KMS key (default), or
@@ -172,34 +160,6 @@ Parameters:
     Type: String
   ExecutionsTableName:
     Type: String
-  CreateConfigTable:
-    Description: Set to false if the DynamoDB config table already exists.
-    Type: String
-    AllowedValues:
-      - 'true'
-      - 'false'
-    Default: 'true'
-  CreateLocksTable:
-    Description: Set to false if the DynamoDB locks table already exists.
-    Type: String
-    AllowedValues:
-      - 'true'
-      - 'false'
-    Default: 'true'
-  CreateSessionsTable:
-    Description: Set to false if the DynamoDB sessions table already exists.
-    Type: String
-    AllowedValues:
-      - 'true'
-      - 'false'
-    Default: 'true'
-  CreateExecutionsTable:
-    Description: Set to false if the DynamoDB executions table already exists.
-    Type: String
-    AllowedValues:
-      - 'true'
-      - 'false'
-    Default: 'true'
   ArtifactBucketName:
     Type: String
   AppStaticKeyPrefix:
@@ -214,30 +174,6 @@ Parameters:
     Description: Path prefix for source zips in the artifact bucket.
     Type: String
     Default: github-source/
-  ConfigTableRCU:
-    Type: Number
-    Default: '5'
-  ConfigTableWCU:
-    Type: Number
-    Default: '1'
-  LocksTableRCU:
-    Type: Number
-    Default: '5'
-  LocksTableWCU:
-    Type: Number
-    Default: '1'
-  SessionsTableRCU:
-    Type: Number
-    Default: '5'
-  SessionsTableWCU:
-    Type: Number
-    Default: '1'
-  ExecutionsTableRCU:
-    Type: Number
-    Default: '5'
-  ExecutionsTableWCU:
-    Type: Number
-    Default: '1'
   GitHubUrl:
     Type: String
     Default: https://github.com/
@@ -260,6 +196,13 @@ Parameters:
   GitHubAppPrivateKeyParamName:
     Description: SSM parameter that stores the GitHub App private key.
     Type: String
+  GitHubUseChecks:
+    Description: Set to false to disable the use of GitHub Checks. See https://developer.github.com/v3/checks/
+    Type: String
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Default: 'true'
   SessionSecretsParamName:
     Description: Comma delimited list of secrets used to sign session cookies.
     Type: String
@@ -281,6 +224,17 @@ Parameters:
     Default: '30'
     MinValue: 10
     MaxValue: 120
+  LockTimeoutSeconds:
+    Description: Number of seconds until an orphaned execution lock will expired.
+      Must not be less than WaitSecondsDefault x 2.
+    Type: Number
+    Default: '300'
+    MinValue: 60
+  MaxSessionMinutes:
+    Description: Number of minutes until a login session expires.
+    Type: Number
+    Default: '30'
+    MinValue: 10
   BuildsYmlFile:
     Description: The path to the file in the repo that contains the build configuration.
     Type: String
@@ -346,285 +300,6 @@ Parameters:
     Type: String
     Default: -NONE-
 Resources:
-  ConfigDBTable:
-    Properties:
-      TableName: !Ref 'ConfigTableName'
-      KeySchema:
-        - KeyType: HASH
-          AttributeName: id
-      AttributeDefinitions:
-        - AttributeName: id
-          AttributeType: S
-      ProvisionedThroughput:
-        ReadCapacityUnits: !Ref 'ConfigTableRCU'
-        WriteCapacityUnits: !Ref 'ConfigTableWCU'
-      Tags: !If
-        - HasTags
-        - - !If
-            - HasTag1
-            - Key: !Ref 'Tag1Name'
-              Value: !Ref 'Tag1Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag2
-            - Key: !Ref 'Tag2Name'
-              Value: !Ref 'Tag2Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag3
-            - Key: !Ref 'Tag3Name'
-              Value: !Ref 'Tag3Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag4
-            - Key: !Ref 'Tag4Name'
-              Value: !Ref 'Tag4Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag5
-            - Key: !Ref 'Tag5Name'
-              Value: !Ref 'Tag5Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag6
-            - Key: !Ref 'Tag6Name'
-              Value: !Ref 'Tag6Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag7
-            - Key: !Ref 'Tag7Name'
-              Value: !Ref 'Tag7Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag8
-            - Key: !Ref 'Tag8Name'
-              Value: !Ref 'Tag8Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag9
-            - Key: !Ref 'Tag9Name'
-              Value: !Ref 'Tag9Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag10
-            - Key: !Ref 'Tag10Name'
-              Value: !Ref 'Tag10Value'
-            - !Ref 'AWS::NoValue'
-        - !Ref 'AWS::NoValue'
-    Type: AWS::DynamoDB::Table
-    Condition: DoCreateConfigTable
-    DeletionPolicy: Retain
-  LocksTable:
-    Properties:
-      TableName: !Ref 'LocksTableName'
-      KeySchema:
-        - KeyType: HASH
-          AttributeName: id
-      AttributeDefinitions:
-        - AttributeName: id
-          AttributeType: S
-      ProvisionedThroughput:
-        ReadCapacityUnits: !Ref 'LocksTableRCU'
-        WriteCapacityUnits: !Ref 'LocksTableWCU'
-      Tags: !If
-        - HasTags
-        - - !If
-            - HasTag1
-            - Key: !Ref 'Tag1Name'
-              Value: !Ref 'Tag1Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag2
-            - Key: !Ref 'Tag2Name'
-              Value: !Ref 'Tag2Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag3
-            - Key: !Ref 'Tag3Name'
-              Value: !Ref 'Tag3Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag4
-            - Key: !Ref 'Tag4Name'
-              Value: !Ref 'Tag4Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag5
-            - Key: !Ref 'Tag5Name'
-              Value: !Ref 'Tag5Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag6
-            - Key: !Ref 'Tag6Name'
-              Value: !Ref 'Tag6Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag7
-            - Key: !Ref 'Tag7Name'
-              Value: !Ref 'Tag7Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag8
-            - Key: !Ref 'Tag8Name'
-              Value: !Ref 'Tag8Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag9
-            - Key: !Ref 'Tag9Name'
-              Value: !Ref 'Tag9Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag10
-            - Key: !Ref 'Tag10Name'
-              Value: !Ref 'Tag10Value'
-            - !Ref 'AWS::NoValue'
-        - !Ref 'AWS::NoValue'
-    Type: AWS::DynamoDB::Table
-    Condition: DoCreateLocksTable
-    DeletionPolicy: Retain
-  SessionsTable:
-    Properties:
-      TableName: !Ref 'SessionsTableName'
-      KeySchema:
-        - KeyType: HASH
-          AttributeName: id
-      AttributeDefinitions:
-        - AttributeName: id
-          AttributeType: S
-      ProvisionedThroughput:
-        ReadCapacityUnits: !Ref 'SessionsTableRCU'
-        WriteCapacityUnits: !Ref 'SessionsTableWCU'
-      TimeToLiveSpecification:
-        Enabled: 'true'
-        AttributeName: ttlTime
-      Tags: !If
-        - HasTags
-        - - !If
-            - HasTag1
-            - Key: !Ref 'Tag1Name'
-              Value: !Ref 'Tag1Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag2
-            - Key: !Ref 'Tag2Name'
-              Value: !Ref 'Tag2Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag3
-            - Key: !Ref 'Tag3Name'
-              Value: !Ref 'Tag3Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag4
-            - Key: !Ref 'Tag4Name'
-              Value: !Ref 'Tag4Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag5
-            - Key: !Ref 'Tag5Name'
-              Value: !Ref 'Tag5Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag6
-            - Key: !Ref 'Tag6Name'
-              Value: !Ref 'Tag6Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag7
-            - Key: !Ref 'Tag7Name'
-              Value: !Ref 'Tag7Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag8
-            - Key: !Ref 'Tag8Name'
-              Value: !Ref 'Tag8Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag9
-            - Key: !Ref 'Tag9Name'
-              Value: !Ref 'Tag9Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag10
-            - Key: !Ref 'Tag10Name'
-              Value: !Ref 'Tag10Value'
-            - !Ref 'AWS::NoValue'
-        - !Ref 'AWS::NoValue'
-    Type: AWS::DynamoDB::Table
-    Condition: DoCreateSessionsTable
-    DeletionPolicy: Retain
-  ExecutionsTable:
-    Properties:
-      TableName: !Ref 'ExecutionsTableName'
-      KeySchema:
-        - KeyType: HASH
-          AttributeName: repoId
-        - KeyType: RANGE
-          AttributeName: executionId
-      AttributeDefinitions:
-        - AttributeName: repoId
-          AttributeType: S
-        - AttributeName: executionId
-          AttributeType: S
-      ProvisionedThroughput:
-        ReadCapacityUnits: !Ref 'ExecutionsTableRCU'
-        WriteCapacityUnits: !Ref 'ExecutionsTableWCU'
-      Tags: !If
-        - HasTags
-        - - !If
-            - HasTag1
-            - Key: !Ref 'Tag1Name'
-              Value: !Ref 'Tag1Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag2
-            - Key: !Ref 'Tag2Name'
-              Value: !Ref 'Tag2Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag3
-            - Key: !Ref 'Tag3Name'
-              Value: !Ref 'Tag3Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag4
-            - Key: !Ref 'Tag4Name'
-              Value: !Ref 'Tag4Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag5
-            - Key: !Ref 'Tag5Name'
-              Value: !Ref 'Tag5Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag6
-            - Key: !Ref 'Tag6Name'
-              Value: !Ref 'Tag6Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag7
-            - Key: !Ref 'Tag7Name'
-              Value: !Ref 'Tag7Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag8
-            - Key: !Ref 'Tag8Name'
-              Value: !Ref 'Tag8Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag9
-            - Key: !Ref 'Tag9Name'
-              Value: !Ref 'Tag9Value'
-            - !Ref 'AWS::NoValue'
-          - !If
-            - HasTag10
-            - Key: !Ref 'Tag10Name'
-              Value: !Ref 'Tag10Value'
-            - !Ref 'AWS::NoValue'
-        - !Ref 'AWS::NoValue'
-    Type: AWS::DynamoDB::Table
-    Condition: DoCreateExecutionsTable
-    DeletionPolicy: Retain
   WebhookLambdaRole:
     Properties:
       Path: /service-role/
@@ -959,6 +634,8 @@ Resources:
       Timeout: 60
       Environment:
         Variables:
+          LOCK_TIMEOUT_SECONDS: !Ref 'LockTimeoutSeconds'
+          MAX_SESSION_MINUTES: !Ref 'MaxSessionMinutes'
           BUILDS_YML_FILE: !Ref 'BuildsYmlFile'
           BASE_URL: !Ref 'BaseUrl'
           TABLE_CONFIG_NAME: !Ref 'ConfigTableName'
@@ -978,6 +655,7 @@ Resources:
           GH_APP_CLIENT_SECRET_PARAM_NAME: !Ref 'GitHubClientSecretParamName'
           GH_APP_HMAC_SECRET_PARAM_NAME: !Ref 'GitHubWebhookSecretParamName'
           GH_APP_PRIVATE_KEY_PARAM_NAME: !Ref 'GitHubAppPrivateKeyParamName'
+          GITHUB_USE_CHECKS: !Ref 'GitHubUseChecks'
           SESSION_SECRETS_PARAM_NAME: !Ref 'SessionSecretsParamName'
           SECRETS_KMS_ARN: !If
             - DoCreateKMSKey
@@ -1050,6 +728,8 @@ Resources:
       Timeout: 60
       Environment:
         Variables:
+          LOCK_TIMEOUT_SECONDS: !Ref 'LockTimeoutSeconds'
+          MAX_SESSION_MINUTES: !Ref 'MaxSessionMinutes'
           BUILDS_YML_FILE: !Ref 'BuildsYmlFile'
           BASE_URL: !Ref 'BaseUrl'
           TABLE_CONFIG_NAME: !Ref 'ConfigTableName'
@@ -1069,6 +749,7 @@ Resources:
           GH_APP_CLIENT_SECRET_PARAM_NAME: !Ref 'GitHubClientSecretParamName'
           GH_APP_HMAC_SECRET_PARAM_NAME: !Ref 'GitHubWebhookSecretParamName'
           GH_APP_PRIVATE_KEY_PARAM_NAME: !Ref 'GitHubAppPrivateKeyParamName'
+          GITHUB_USE_CHECKS: !Ref 'GitHubUseChecks'
           SESSION_SECRETS_PARAM_NAME: !Ref 'SessionSecretsParamName'
           SECRETS_KMS_ARN: !If
             - DoCreateKMSKey
@@ -1141,6 +822,8 @@ Resources:
       Timeout: 60
       Environment:
         Variables:
+          LOCK_TIMEOUT_SECONDS: !Ref 'LockTimeoutSeconds'
+          MAX_SESSION_MINUTES: !Ref 'MaxSessionMinutes'
           BUILDS_YML_FILE: !Ref 'BuildsYmlFile'
           BASE_URL: !Ref 'BaseUrl'
           TABLE_CONFIG_NAME: !Ref 'ConfigTableName'
@@ -1160,6 +843,7 @@ Resources:
           GH_APP_CLIENT_SECRET_PARAM_NAME: !Ref 'GitHubClientSecretParamName'
           GH_APP_HMAC_SECRET_PARAM_NAME: !Ref 'GitHubWebhookSecretParamName'
           GH_APP_PRIVATE_KEY_PARAM_NAME: !Ref 'GitHubAppPrivateKeyParamName'
+          GITHUB_USE_CHECKS: !Ref 'GitHubUseChecks'
           SESSION_SECRETS_PARAM_NAME: !Ref 'SessionSecretsParamName'
           SECRETS_KMS_ARN: !If
             - DoCreateKMSKey

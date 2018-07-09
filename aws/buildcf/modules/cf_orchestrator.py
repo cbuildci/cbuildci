@@ -1,4 +1,3 @@
-import yaml
 import os
 
 from .tags import build_tags_list
@@ -16,10 +15,6 @@ from troposphere.apigateway import \
     Integration, IntegrationResponse
 from troposphere.logs import LogGroup
 from troposphere.stepfunctions import StateMachine
-from troposphere.dynamodb import \
-    Table, KeySchema, Projection, \
-    AttributeDefinition, ProvisionedThroughput, LocalSecondaryIndex, \
-    TimeToLiveSpecification
 
 # Access Control
 from awacs.aws import Action, Allow, Statement, Principal, PolicyDocument
@@ -50,7 +45,7 @@ def create_template():
 
     p_base_url = t.add_parameter(Parameter(
         "BaseUrl",
-        Description = "The base URL of the application, e.g. \"https://build.foobar.com/\"",
+        Description = "The base URL of the application, e.g. \"https://cbuildci.mycompany.com/\"",
         Type = "String",
     ))
 
@@ -102,43 +97,6 @@ def create_template():
         Type = "String",
     ))
 
-    # p_builds_table_name = t.add_parameter(Parameter(
-    #     "BuildsTableName",
-    #     Type = "String",
-    # ))
-
-    p_create_config_table = t.add_parameter(Parameter(
-        "CreateConfigTable",
-        Description = "Set to false if the DynamoDB config table already exists.",
-        Type = "String",
-        AllowedValues = ["true", "false"],
-        Default = "true",
-    ))
-
-    p_create_locks_table = t.add_parameter(Parameter(
-        "CreateLocksTable",
-        Description = "Set to false if the DynamoDB locks table already exists.",
-        Type = "String",
-        AllowedValues = ["true", "false"],
-        Default = "true",
-    ))
-
-    p_create_sessions_table = t.add_parameter(Parameter(
-        "CreateSessionsTable",
-        Description = "Set to false if the DynamoDB sessions table already exists.",
-        Type = "String",
-        AllowedValues = ["true", "false"],
-        Default = "true",
-    ))
-
-    p_create_executions_table = t.add_parameter(Parameter(
-        "CreateExecutionsTable",
-        Description = "Set to false if the DynamoDB executions table already exists.",
-        Type = "String",
-        AllowedValues = ["true", "false"],
-        Default = "true",
-    ))
-
     p_artifact_bucket_name = t.add_parameter(Parameter(
         "ArtifactBucketName",
         Type = "String",
@@ -164,66 +122,6 @@ def create_template():
         Type = "String",
         Default = "github-source/",
     ))
-
-    p_config_table_rcu = t.add_parameter(Parameter(
-        "ConfigTableRCU",
-        Type = "Number",
-        Default = "5",
-    ))
-
-    p_config_table_wcu = t.add_parameter(Parameter(
-        "ConfigTableWCU",
-        Type = "Number",
-        Default = "1",
-    ))
-
-    p_locks_table_rcu = t.add_parameter(Parameter(
-        "LocksTableRCU",
-        Type = "Number",
-        Default = "5",
-    ))
-
-    p_locks_table_wcu = t.add_parameter(Parameter(
-        "LocksTableWCU",
-        Type = "Number",
-        Default = "1",
-    ))
-
-    p_sessions_table_rcu = t.add_parameter(Parameter(
-        "SessionsTableRCU",
-        Type = "Number",
-        Default = "5",
-    ))
-
-    p_sessions_table_wcu = t.add_parameter(Parameter(
-        "SessionsTableWCU",
-        Type = "Number",
-        Default = "1",
-    ))
-
-    p_executions_table_rcu = t.add_parameter(Parameter(
-        "ExecutionsTableRCU",
-        Type = "Number",
-        Default = "5",
-    ))
-
-    p_executions_table_wcu = t.add_parameter(Parameter(
-        "ExecutionsTableWCU",
-        Type = "Number",
-        Default = "1",
-    ))
-
-    # p_builds_table_rcu = t.add_parameter(Parameter(
-    #     "BuildsTableRCU",
-    #     Type = "Number",
-    #     Default = "5",
-    # ))
-
-    # p_builds_table_wcu = t.add_parameter(Parameter(
-    #     "BuildsTableWCU",
-    #     Type = "Number",
-    #     Default = "1",
-    # ))
 
     p_github_url = t.add_parameter(Parameter(
         "GitHubUrl",
@@ -267,6 +165,14 @@ def create_template():
         Type = "String",
     ))
 
+    p_github_use_checks = t.add_parameter(Parameter(
+        "GitHubUseChecks",
+        Description = "Set to false to disable the use of GitHub Checks. See https://developer.github.com/v3/checks/",
+        Type = "String",
+        AllowedValues = ["true", "false"],
+        Default = "true",
+    ))
+
     p_session_secrets_param_name = t.add_parameter(Parameter(
         "SessionSecretsParamName",
         Description = "Comma delimited list of secrets used to sign session cookies.",
@@ -301,6 +207,22 @@ def create_template():
         MaxValue = 120,
     ))
 
+    p_lock_timeout_seconds = t.add_parameter(Parameter(
+        "LockTimeoutSeconds",
+        Description = "Number of seconds until an orphaned execution lock will expired. Must not be less than WaitSecondsDefault x 2.",
+        Type = "Number",
+        Default = "300",
+        MinValue = 60,
+    ))
+
+    p_max_session_minutes = t.add_parameter(Parameter(
+        "MaxSessionMinutes",
+        Description = "Number of minutes until a login session expires.",
+        Type = "Number",
+        Default = "30",
+        MinValue = 10,
+    ))
+
     p_builds_yml_file = t.add_parameter(Parameter(
         "BuildsYmlFile",
         Description = "The path to the file in the repo that contains the build configuration.",
@@ -323,26 +245,6 @@ def create_template():
         Not(Equals(Ref(p_secrets_kms_user_arns), "-NONE-")),
     )
 
-    t.add_condition(
-        "DoCreateConfigTable",
-        Equals(Ref(p_create_config_table), "true"),
-    )
-
-    t.add_condition(
-        "DoCreateLocksTable",
-        Equals(Ref(p_create_locks_table), "true"),
-    )
-
-    t.add_condition(
-        "DoCreateSessionsTable",
-        Equals(Ref(p_create_sessions_table), "true"),
-    )
-
-    t.add_condition(
-        "DoCreateExecutionsTable",
-        Equals(Ref(p_create_executions_table), "true"),
-    )
-
     # Replace with custom tags if desired.
     tags = build_tags_list(t)
 
@@ -355,168 +257,6 @@ def create_template():
 
     with open(path_state_machine_definition, "r") as stream:
         state_machine_definition = stream.read()
-
-    t.add_resource(Table(
-        "ConfigDBTable",
-        Condition = "DoCreateConfigTable",
-        DeletionPolicy = "Retain",
-        TableName = Ref(p_config_table_name),
-        KeySchema = [
-            KeySchema(
-                KeyType = "HASH",
-                AttributeName = "id",
-            ),
-        ],
-        AttributeDefinitions = [
-            AttributeDefinition(
-                AttributeName = "id",
-                AttributeType = "S",
-            ),
-        ],
-        ProvisionedThroughput = ProvisionedThroughput(
-            ReadCapacityUnits = Ref(p_config_table_rcu),
-            WriteCapacityUnits = Ref(p_config_table_wcu)
-        ),
-        Tags = tags,
-    ))
-
-    t.add_resource(Table(
-        "LocksTable",
-        Condition = "DoCreateLocksTable",
-        DeletionPolicy = "Retain",
-        TableName = Ref(p_locks_table_name),
-        KeySchema = [
-            KeySchema(
-                KeyType = "HASH",
-                AttributeName = "id",
-            ),
-        ],
-        AttributeDefinitions = [
-            AttributeDefinition(
-                AttributeName = "id",
-                AttributeType = "S",
-            ),
-        ],
-        ProvisionedThroughput = ProvisionedThroughput(
-            ReadCapacityUnits = Ref(p_locks_table_rcu),
-            WriteCapacityUnits = Ref(p_locks_table_wcu)
-        ),
-        Tags = tags,
-    ))
-
-    t.add_resource(Table(
-        "SessionsTable",
-        Condition = "DoCreateSessionsTable",
-        DeletionPolicy = "Retain",
-        TableName = Ref(p_sessions_table_name),
-        KeySchema = [
-            KeySchema(
-                KeyType = "HASH",
-                AttributeName = "id",
-            ),
-        ],
-        AttributeDefinitions = [
-            AttributeDefinition(
-                AttributeName = "id",
-                AttributeType = "S",
-            ),
-        ],
-        ProvisionedThroughput = ProvisionedThroughput(
-            ReadCapacityUnits = Ref(p_sessions_table_rcu),
-            WriteCapacityUnits = Ref(p_sessions_table_wcu)
-        ),
-        TimeToLiveSpecification = TimeToLiveSpecification(
-            Enabled = True,
-            AttributeName = "ttlTime",
-        ),
-        Tags = tags,
-    ))
-
-    t.add_resource(Table(
-        "ExecutionsTable",
-        Condition = "DoCreateExecutionsTable",
-        DeletionPolicy = "Retain",
-        TableName = Ref(p_executions_table_name),
-        KeySchema = [
-            KeySchema(
-                KeyType = "HASH",
-                AttributeName = "repoId",
-            ),
-            KeySchema(
-                KeyType = "RANGE",
-                AttributeName = "executionId",
-            ),
-        ],
-        AttributeDefinitions = [
-            AttributeDefinition(
-                AttributeName = "repoId",
-                AttributeType = "S",
-            ),
-            AttributeDefinition(
-                AttributeName = "executionId",
-                AttributeType = "S",
-            ),
-        ],
-        ProvisionedThroughput = ProvisionedThroughput(
-            ReadCapacityUnits = Ref(p_executions_table_rcu),
-            WriteCapacityUnits = Ref(p_executions_table_wcu)
-        ),
-        Tags = tags,
-    ))
-
-    # t.add_resource(Table(
-    #     "BuildsTable",
-    #     Condition = "DoCreateBuildsTable",
-    #     DeletionPolicy = "Retain",
-    #     TableName = Ref(p_builds_table_name),
-    #     KeySchema = [
-    #         KeySchema(
-    #             KeyType = "HASH",
-    #             AttributeName = "executionId",
-    #         ),
-    #         KeySchema(
-    #             KeyType = "RANGE",
-    #             AttributeName = "buildId",
-    #         ),
-    #     ],
-    #     AttributeDefinitions = [
-    #         AttributeDefinition(
-    #             AttributeName = "executionId",
-    #             AttributeType = "S",
-    #         ),
-    #         AttributeDefinition(
-    #             AttributeName = "buildId",
-    #             AttributeType = "S",
-    #         ),
-    #         AttributeDefinition(
-    #             AttributeName = "repoId",
-    #             AttributeType = "S",
-    #         ),
-    #     ],
-    #     LocalSecondaryIndexes = [
-    #         LocalSecondaryIndex(
-    #             IndexName = "BuildsByRepoId",
-    #             KeySchema = [
-    #                 KeySchema(
-    #                     KeyType = "HASH",
-    #                     AttributeName = "repoId",
-    #                 ),
-    #                 KeySchema(
-    #                     KeyType = "RANGE",
-    #                     AttributeName = "buildId",
-    #                 ),
-    #             ],
-    #             Projection = Projection(
-    #                 ProjectionType = "KEYS_ONLY",
-    #             ),
-    #         )
-    #     ],
-    #     ProvisionedThroughput = ProvisionedThroughput(
-    #         ReadCapacityUnits = Ref(p_builds_table_rcu),
-    #         WriteCapacityUnits = Ref(p_builds_table_wcu)
-    #     ),
-    #     Tags = tags,
-    # ))
 
     r_webhook_lambda_role = t.add_resource(Role(
         "WebhookLambdaRole",
@@ -953,6 +693,8 @@ def create_template():
 
     lambda_env_vars = Environment(
         Variables = {
+            "LOCK_TIMEOUT_SECONDS": Ref(p_lock_timeout_seconds),
+            "MAX_SESSION_MINUTES": Ref(p_max_session_minutes),
             "BUILDS_YML_FILE": Ref(p_builds_yml_file),
             "BASE_URL": Ref(p_base_url),
             "TABLE_CONFIG_NAME": Ref(p_config_table_name),
@@ -984,6 +726,7 @@ def create_template():
             "GH_APP_CLIENT_SECRET_PARAM_NAME": Ref(p_github_client_secret_param_name),
             "GH_APP_HMAC_SECRET_PARAM_NAME": Ref(p_github_webhook_secret_param_name),
             "GH_APP_PRIVATE_KEY_PARAM_NAME": Ref(p_github_app_private_key_param_name),
+            "GITHUB_USE_CHECKS": Ref(p_github_use_checks),
             "SESSION_SECRETS_PARAM_NAME": Ref(p_session_secrets_param_name),
             "SECRETS_KMS_ARN": If(
                 "DoCreateKMSKey",

@@ -1,0 +1,462 @@
+Description: The DynamoDB tables stack for CBuildCI.
+Conditions:
+  HasTag1: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag1Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag1Value'
+        - -NONE-
+  HasTag2: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag2Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag2Value'
+        - -NONE-
+  HasTag3: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag3Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag3Value'
+        - -NONE-
+  HasTag4: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag4Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag4Value'
+        - -NONE-
+  HasTag5: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag5Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag5Value'
+        - -NONE-
+  HasTag6: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag6Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag6Value'
+        - -NONE-
+  HasTag7: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag7Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag7Value'
+        - -NONE-
+  HasTag8: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag8Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag8Value'
+        - -NONE-
+  HasTag9: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag9Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag9Value'
+        - -NONE-
+  HasTag10: !Not
+    - !Or
+      - !Equals
+        - !Ref 'Tag10Name'
+        - -NONE-
+      - !Equals
+        - !Ref 'Tag10Value'
+        - -NONE-
+  HasTags: !Or
+    - !Condition 'HasTag1'
+    - !Condition 'HasTag2'
+    - !Condition 'HasTag3'
+    - !Condition 'HasTag4'
+    - !Condition 'HasTag5'
+    - !Condition 'HasTag6'
+    - !Condition 'HasTag7'
+    - !Condition 'HasTag8'
+    - !Condition 'HasTag9'
+    - !Condition 'HasTag10'
+Parameters:
+  ConfigTableName:
+    Type: String
+  LocksTableName:
+    Type: String
+  SessionsTableName:
+    Type: String
+  ExecutionsTableName:
+    Type: String
+  ConfigTableRCU:
+    Type: Number
+    Default: '5'
+  ConfigTableWCU:
+    Type: Number
+    Default: '1'
+  LocksTableRCU:
+    Type: Number
+    Default: '5'
+  LocksTableWCU:
+    Type: Number
+    Default: '1'
+  SessionsTableRCU:
+    Type: Number
+    Default: '5'
+  SessionsTableWCU:
+    Type: Number
+    Default: '1'
+  ExecutionsTableRCU:
+    Type: Number
+    Default: '5'
+  ExecutionsTableWCU:
+    Type: Number
+    Default: '1'
+  Tag1Name:
+    Type: String
+    Default: -NONE-
+  Tag1Value:
+    Type: String
+    Default: -NONE-
+  Tag2Name:
+    Type: String
+    Default: -NONE-
+  Tag2Value:
+    Type: String
+    Default: -NONE-
+  Tag3Name:
+    Type: String
+    Default: -NONE-
+  Tag3Value:
+    Type: String
+    Default: -NONE-
+  Tag4Name:
+    Type: String
+    Default: -NONE-
+  Tag4Value:
+    Type: String
+    Default: -NONE-
+  Tag5Name:
+    Type: String
+    Default: -NONE-
+  Tag5Value:
+    Type: String
+    Default: -NONE-
+  Tag6Name:
+    Type: String
+    Default: -NONE-
+  Tag6Value:
+    Type: String
+    Default: -NONE-
+  Tag7Name:
+    Type: String
+    Default: -NONE-
+  Tag7Value:
+    Type: String
+    Default: -NONE-
+  Tag8Name:
+    Type: String
+    Default: -NONE-
+  Tag8Value:
+    Type: String
+    Default: -NONE-
+  Tag9Name:
+    Type: String
+    Default: -NONE-
+  Tag9Value:
+    Type: String
+    Default: -NONE-
+  Tag10Name:
+    Type: String
+    Default: -NONE-
+  Tag10Value:
+    Type: String
+    Default: -NONE-
+Resources:
+  ConfigDBTable:
+    Properties:
+      TableName: !Ref 'ConfigTableName'
+      KeySchema:
+        - KeyType: HASH
+          AttributeName: id
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      ProvisionedThroughput:
+        ReadCapacityUnits: !Ref 'ConfigTableRCU'
+        WriteCapacityUnits: !Ref 'ConfigTableWCU'
+      Tags: !If
+        - HasTags
+        - - !If
+            - HasTag1
+            - Key: !Ref 'Tag1Name'
+              Value: !Ref 'Tag1Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag2
+            - Key: !Ref 'Tag2Name'
+              Value: !Ref 'Tag2Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag3
+            - Key: !Ref 'Tag3Name'
+              Value: !Ref 'Tag3Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag4
+            - Key: !Ref 'Tag4Name'
+              Value: !Ref 'Tag4Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag5
+            - Key: !Ref 'Tag5Name'
+              Value: !Ref 'Tag5Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag6
+            - Key: !Ref 'Tag6Name'
+              Value: !Ref 'Tag6Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag7
+            - Key: !Ref 'Tag7Name'
+              Value: !Ref 'Tag7Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag8
+            - Key: !Ref 'Tag8Name'
+              Value: !Ref 'Tag8Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag9
+            - Key: !Ref 'Tag9Name'
+              Value: !Ref 'Tag9Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag10
+            - Key: !Ref 'Tag10Name'
+              Value: !Ref 'Tag10Value'
+            - !Ref 'AWS::NoValue'
+        - !Ref 'AWS::NoValue'
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+  LocksTable:
+    Properties:
+      TableName: !Ref 'LocksTableName'
+      KeySchema:
+        - KeyType: HASH
+          AttributeName: id
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      ProvisionedThroughput:
+        ReadCapacityUnits: !Ref 'LocksTableRCU'
+        WriteCapacityUnits: !Ref 'LocksTableWCU'
+      Tags: !If
+        - HasTags
+        - - !If
+            - HasTag1
+            - Key: !Ref 'Tag1Name'
+              Value: !Ref 'Tag1Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag2
+            - Key: !Ref 'Tag2Name'
+              Value: !Ref 'Tag2Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag3
+            - Key: !Ref 'Tag3Name'
+              Value: !Ref 'Tag3Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag4
+            - Key: !Ref 'Tag4Name'
+              Value: !Ref 'Tag4Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag5
+            - Key: !Ref 'Tag5Name'
+              Value: !Ref 'Tag5Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag6
+            - Key: !Ref 'Tag6Name'
+              Value: !Ref 'Tag6Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag7
+            - Key: !Ref 'Tag7Name'
+              Value: !Ref 'Tag7Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag8
+            - Key: !Ref 'Tag8Name'
+              Value: !Ref 'Tag8Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag9
+            - Key: !Ref 'Tag9Name'
+              Value: !Ref 'Tag9Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag10
+            - Key: !Ref 'Tag10Name'
+              Value: !Ref 'Tag10Value'
+            - !Ref 'AWS::NoValue'
+        - !Ref 'AWS::NoValue'
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+  SessionsTable:
+    Properties:
+      TableName: !Ref 'SessionsTableName'
+      KeySchema:
+        - KeyType: HASH
+          AttributeName: id
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      ProvisionedThroughput:
+        ReadCapacityUnits: !Ref 'SessionsTableRCU'
+        WriteCapacityUnits: !Ref 'SessionsTableWCU'
+      TimeToLiveSpecification:
+        Enabled: 'true'
+        AttributeName: ttlTime
+      Tags: !If
+        - HasTags
+        - - !If
+            - HasTag1
+            - Key: !Ref 'Tag1Name'
+              Value: !Ref 'Tag1Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag2
+            - Key: !Ref 'Tag2Name'
+              Value: !Ref 'Tag2Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag3
+            - Key: !Ref 'Tag3Name'
+              Value: !Ref 'Tag3Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag4
+            - Key: !Ref 'Tag4Name'
+              Value: !Ref 'Tag4Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag5
+            - Key: !Ref 'Tag5Name'
+              Value: !Ref 'Tag5Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag6
+            - Key: !Ref 'Tag6Name'
+              Value: !Ref 'Tag6Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag7
+            - Key: !Ref 'Tag7Name'
+              Value: !Ref 'Tag7Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag8
+            - Key: !Ref 'Tag8Name'
+              Value: !Ref 'Tag8Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag9
+            - Key: !Ref 'Tag9Name'
+              Value: !Ref 'Tag9Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag10
+            - Key: !Ref 'Tag10Name'
+              Value: !Ref 'Tag10Value'
+            - !Ref 'AWS::NoValue'
+        - !Ref 'AWS::NoValue'
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+  ExecutionsTable:
+    Properties:
+      TableName: !Ref 'ExecutionsTableName'
+      KeySchema:
+        - KeyType: HASH
+          AttributeName: repoId
+        - KeyType: RANGE
+          AttributeName: executionId
+      AttributeDefinitions:
+        - AttributeName: repoId
+          AttributeType: S
+        - AttributeName: executionId
+          AttributeType: S
+      ProvisionedThroughput:
+        ReadCapacityUnits: !Ref 'ExecutionsTableRCU'
+        WriteCapacityUnits: !Ref 'ExecutionsTableWCU'
+      Tags: !If
+        - HasTags
+        - - !If
+            - HasTag1
+            - Key: !Ref 'Tag1Name'
+              Value: !Ref 'Tag1Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag2
+            - Key: !Ref 'Tag2Name'
+              Value: !Ref 'Tag2Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag3
+            - Key: !Ref 'Tag3Name'
+              Value: !Ref 'Tag3Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag4
+            - Key: !Ref 'Tag4Name'
+              Value: !Ref 'Tag4Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag5
+            - Key: !Ref 'Tag5Name'
+              Value: !Ref 'Tag5Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag6
+            - Key: !Ref 'Tag6Name'
+              Value: !Ref 'Tag6Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag7
+            - Key: !Ref 'Tag7Name'
+              Value: !Ref 'Tag7Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag8
+            - Key: !Ref 'Tag8Name'
+              Value: !Ref 'Tag8Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag9
+            - Key: !Ref 'Tag9Name'
+              Value: !Ref 'Tag9Value'
+            - !Ref 'AWS::NoValue'
+          - !If
+            - HasTag10
+            - Key: !Ref 'Tag10Name'
+              Value: !Ref 'Tag10Value'
+            - !Ref 'AWS::NoValue'
+        - !Ref 'AWS::NoValue'
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
