@@ -40,24 +40,24 @@ describe('schema', () => {
 
         it('should throw error if "codeBuildProjectArns" is missing or invalid', () => {
             expect(() => schema.validateRepoConfig({
-                id: 'host/repo/user',
+                id: 'repo/user',
             }))
                 .to.throw('codeBuildProjectArns must have a value');
 
             expect(() => schema.validateRepoConfig({
-                id: 'host/repo/user',
+                id: 'repo/user',
                 codeBuildProjectArns: '',
             }))
                 .to.throw('codeBuildProjectArns must have a value');
 
             expect(() => schema.validateRepoConfig({
-                id: 'host/repo/user',
+                id: 'repo/user',
                 codeBuildProjectArns: [],
             }))
                 .to.throw('codeBuildProjectArns must not have a length less than 1');
 
             expect(() => schema.validateRepoConfig({
-                id: 'host/repo/user',
+                id: 'repo/user',
                 codeBuildProjectArns: ['foobar'],
             }))
                 .to.throw('codeBuildProjectArns.0 must match the pattern /^arn:aws:codebuild:[^:]+:[^:]+:project\\/.+$/');
@@ -65,16 +65,16 @@ describe('schema', () => {
 
         it('should only require "id" and "codeBuildProjectArn" and have expected defaults for other props', () => {
             expect(() => schema.validateRepoConfig({
-                id: 'host/repo/user',
+                id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
             }))
                 .to.not.throw();
 
             expect(schema.validateRepoConfig({
-                id: 'host/repo/user',
+                id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
             })).to.deep.equal({
-                id: 'host/repo/user',
+                id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 // encryptedOAuthToken: undefined,
                 // encryptedWebhookSecret: undefined,
@@ -85,14 +85,14 @@ describe('schema', () => {
 
         it('should throw error if encryptedWebhookSecret is invalid', () => {
             expect(() => schema.validateRepoConfig({
-                id: 'host/repo/user',
+                id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 encryptedWebhookSecret: '',
             }))
                 .to.throw('encryptedWebhookSecret must have a length of at least 1');
 
             expect(() => schema.validateRepoConfig({
-                id: 'host/repo/user',
+                id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 encryptedWebhookSecret: 'fb',
             }))
@@ -101,14 +101,14 @@ describe('schema', () => {
 
         it('should throw error if encryptedOAuthToken is invalid', () => {
             expect(() => schema.validateRepoConfig({
-                id: 'host/repo/user',
+                id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 encryptedOAuthToken: '',
             }))
                 .to.throw('encryptedOAuthToken must have a length of at least 1');
 
             expect(() => schema.validateRepoConfig({
-                id: 'host/repo/user',
+                id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 encryptedOAuthToken: 'fb',
             }))
@@ -117,28 +117,28 @@ describe('schema', () => {
 
         it('should throw error if waitSeconds is invalid', () => {
             expect(() => schema.validateRepoConfig({
-                id: 'host/repo/user',
+                id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 waitSeconds: '',
             }))
                 .to.throw('waitSeconds must be a number');
 
             expect(() => schema.validateRepoConfig({
-                id: 'host/repo/user',
+                id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 waitSeconds: 9,
             }))
                 .to.throw('waitSeconds must not be less than 10');
 
             expect(() => schema.validateRepoConfig({
-                id: 'host/repo/user',
+                id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 waitSeconds: 10.1,
             }))
                 .to.throw('waitSeconds must be an integer');
 
             expect(() => schema.validateRepoConfig({
-                id: 'host/repo/user',
+                id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 waitSeconds: 121,
             }))
@@ -147,21 +147,21 @@ describe('schema', () => {
 
         it('should throw error if buildDefaults is invalid', () => {
             expect(() => schema.validateRepoConfig({
-                id: 'host/repo/user',
+                id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 buildDefaults: [],
             }))
                 .to.throw('buildDefaults must be an object');
 
             expect(() => schema.validateRepoConfig({
-                id: 'host/repo/user',
+                id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 buildDefaults: false,
             }))
                 .to.throw('buildDefaults must be an object');
 
             expect(() => schema.validateRepoConfig({
-                id: 'host/repo/user',
+                id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 buildDefaults: {},
             }))

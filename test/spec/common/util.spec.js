@@ -23,16 +23,15 @@ describe('util', () => {
 
     describe('buildRepoId', () => {
         it('should produce the expected id', () => {
-            expect(util.buildRepoId('hst', 'USER', 'rePO'))
-                .to.equal('hst/user/repo');
+            expect(util.buildRepoId('USER', 'rePO'))
+                .to.equal('user/repo');
         });
     });
 
     describe('parseRepoId', () => {
         it('should produce the expected id', () => {
-            expect(util.parseRepoId('hst/USER/rePO'))
+            expect(util.parseRepoId('USeR/rePO'))
                 .to.deep.equal({
-                    host: 'hst',
                     owner: 'user',
                     repo: 'repo',
                 });
@@ -41,13 +40,13 @@ describe('util', () => {
 
     describe('isValidRepoId', () => {
         it('should return true for valid IDs', () => {
-            expect(util.isValidRepoId('host/user/repo'))
+            expect(util.isValidRepoId('user/repo'))
                 .to.equal(true);
 
-            expect(util.isValidRepoId('github.com/user/repo'))
+            expect(util.isValidRepoId('USER/repo'))
                 .to.equal(true);
 
-            expect(util.isValidRepoId('github.com:443/user/repo'))
+            expect(util.isValidRepoId('user/REPO'))
                 .to.equal(true);
         });
 
@@ -61,10 +60,7 @@ describe('util', () => {
             expect(util.isValidRepoId('hst'))
                 .to.equal(false);
 
-            expect(util.isValidRepoId('hst/repo'))
-                .to.equal(false);
-
-            expect(util.isValidRepoId('hst/user/repo/'))
+            expect(util.isValidRepoId('hst/user/repo'))
                 .to.equal(false);
 
             expect(util.isValidRepoId('https://hst/user/repo/'))
@@ -104,8 +100,8 @@ describe('util', () => {
 
     describe('buildLockId', () => {
         it('should produce the expected id', () => {
-            expect(util.buildLockId('hst', 'USER', 'rePO', 'coMMit'))
-                .to.equal('hst/user/repo/commit');
+            expect(util.buildLockId('USER', 'rePO', 'coMMit'))
+                .to.equal('user/repo/commit');
         });
     });
 

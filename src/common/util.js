@@ -3,27 +3,25 @@
 /**
  * Build a repo ID.
  *
- * @param {string} host
  * @param {string} owner
  * @param {string} repo
  * @returns {string}
  */
-exports.buildRepoId = function buildRepoId(host, owner, repo) {
-    return `${host}/${owner}/${repo}`.toLowerCase();
+exports.buildRepoId = function buildRepoId(owner, repo) {
+    return `${owner}/${repo}`.toLowerCase();
 };
 
 /**
  * Split a repo ID into its parts, or null if it is invalid.
  *
  * @param {string} id
- * @returns {{ host: string, owner: string, repo: string }|null}
+ * @returns {{ owner: string, repo: string }|null}
  */
 exports.parseRepoId = function parseRepoId(id) {
-    const match = typeof id === 'string' && id.toLowerCase().match(/^([^/ ]+)\/([^/ ]+)\/([^/ ]+)$/);
+    const match = typeof id === 'string' && id.toLowerCase().match(/^([^/ ]+)\/([^/ ]+)$/);
     return match ? {
-        host: match[1],
-        owner: match[2],
-        repo: match[3],
+        owner: match[1],
+        repo: match[2],
     } : null;
 };
 
@@ -50,14 +48,13 @@ exports.isValidExecutionId = function isValidExecutionId(id) {
 /**
  * Build a lock ID.
  *
- * @param {string} host
  * @param {string} owner
  * @param {string} repo
  * @param {string} commit
  * @returns {string}
  */
-exports.buildLockId = function buildLockId(host, owner, repo, commit) {
-    return `${host}/${owner}/${repo}/${commit}`.toLowerCase();
+exports.buildLockId = function buildLockId(owner, repo, commit) {
+    return `${owner}/${repo}/${commit}`.toLowerCase();
 };
 
 /**
