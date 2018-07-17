@@ -42,7 +42,7 @@ exports.isValidRepoId = function isValidRepoId(id) {
  * @returns {boolean}
  */
 exports.isValidExecutionId = function isValidExecutionId(id) {
-    return typeof id === 'string' && !!id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+    return typeof id === 'string' && !!id.match(/^[0-9a-f]{5,40}\.[1-9][0-9]{0,3}$/);
 };
 
 /**

@@ -73,13 +73,10 @@ describe('util', () => {
 
     describe('isValidExecutionId', () => {
         it('should return true for valid execution IDs', () => {
-            expect(util.isValidExecutionId('12345678-abcd-4321-dcba-1234567890ab'))
+            expect(util.isValidExecutionId('a9eb85ea214a6cfa6882f4be041d5cce7bee3e45.1'))
                 .to.equal(true);
 
-            expect(util.isValidExecutionId('abcdef12-1234-dcba-1234-1234567890ab'))
-                .to.equal(true);
-
-            expect(util.isValidExecutionId('12345678-ABCD-4321-DCBA-1234567890AB'))
+            expect(util.isValidExecutionId('a9eb85ea214a6cfa6882f4be041d5cce7bee3e45.9999'))
                 .to.equal(true);
         });
 
@@ -90,10 +87,19 @@ describe('util', () => {
             expect(util.isValidExecutionId(''))
                 .to.equal(false);
 
-            expect(util.isValidExecutionId('hst'))
+            expect(util.isValidExecutionId('a9eb85ea214a6cfa6882f4be041d5cce7bee3e45.0'))
                 .to.equal(false);
 
-            expect(util.isValidExecutionId('12345678abcd4321dcba1234567890ab'))
+            expect(util.isValidExecutionId('a9eb85ea214a6cfa6882f4be041d5cce7bee3e45.0001'))
+                .to.equal(false);
+
+            expect(util.isValidExecutionId('A9EB85EA214A6CFA6882F4BE041D5CCE7BEE3E45.1'))
+                .to.equal(false);
+
+            expect(util.isValidExecutionId('a9eb85ea214a6cfa6882f4be041d5cce7bee3e45.10000'))
+                .to.equal(false);
+
+            expect(util.isValidExecutionId('a9eb85ea214a6cfa6882f4be041d5cce7bee3e45.99999'))
                 .to.equal(false);
         });
     });
