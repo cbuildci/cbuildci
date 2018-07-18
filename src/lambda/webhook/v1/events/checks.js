@@ -18,12 +18,12 @@ module.exports = async function handleCheckEvent(ctx, gitHubEventType, ghEvent, 
     validateCheckEvent(ctx, gitHubEventType, ghEvent);
 
     if (gitHubEventType === 'check_run' && ghEvent.action === 'requested_action' && ghEvent.requested_action.identifier === 'stop') {
-        const [, repoId, executionId] = ghEvent.check_run.external_id.match(/^(.+)\/execution\/(.+)$/);
+        const { owner, repo, sha, executionId } = util.parseLongExecutionId(ghEvent.check_run.external_id);
 
         const execution = await aws.getExecution(
             ctx.ciApp.tableExecutionsName,
-            repoId,
-            executionId,
+            util.buildRepoId(owner, repo),
+            `${sha}/${executionId}`,
         );
 
         if (!execution.state || !execution.state.isRunning || execution.state.errorInfo) {
@@ -115,8 +115,42 @@ module.exports = async function handleCheckEvent(ctx, gitHubEventType, ghEvent, 
             token,
             tokenExpiration,
             repoConfig,
-            ghEvent.repository.owner.id,
-            ghEvent.repository.id,
+            {
+                id: ghEvent.repository.owner.id,
+                login: ghEvent.repository.owner.login,
+                type: ghEvent.repository.owner.type,
+            },
+            {
+                id: ghEvent.repository.id,
+                name: ghEvent.repository.name,
+            },
+            {
+                event: gitHubEventType,
+                action: ghEvent.action,
+                sender: {
+                    id: ghEvent.sender.id,
+                    login: ghEvent.sender.login,
+                    type: ghEvent.sender.type,
+                },
+                check_run: ghEvent.check_run && {
+                    id: ghEvent.check_run.id,
+                },
+                requested_action: ghEvent.requested_action && {
+                    identifier: ghEvent.requested_action.identifier,
+                },
+                pull_requests: ghEvent[gitHubEventType].pull_requests.map((pullRequest) => ({
+                    id: pullRequest.id,
+                    number: pullRequest.number,
+                    head: {
+                        ref: pullRequest.head.ref,
+                        sha: pullRequest.head.sha,
+                    },
+                    base: {
+                        ref: pullRequest.base.ref,
+                        sha: pullRequest.base.sha,
+                    },
+                })),
+            },
             isForGitHubApp ? ghEvent.installation.id : null,
             ghEvent[gitHubEventType].head_sha,
         );
@@ -142,7 +176,7 @@ function validateCheckEvent(ctx, gitHubEventType, ghEvent) {
         }
 
         if (typeof ghEvent.requested_action.identifier !== 'string') {
-            ctx.throw(400, 'Missing requested_action.identifier property');
+            ctx.throw(400, 'Missing or non-string requested_action.identifier property');
         }
     }
 
@@ -152,7 +186,7 @@ function validateCheckEvent(ctx, gitHubEventType, ghEvent) {
         }
 
         if (typeof ghEvent.check_suite.head_sha !== 'string') {
-            ctx.throw(400, 'Missing or invalid check_suite.head_sha property');
+            ctx.throw(400, 'Missing or non-string check_suite.head_sha property');
         }
     }
 
@@ -161,35 +195,72 @@ function validateCheckEvent(ctx, gitHubEventType, ghEvent) {
             ctx.throw(400, 'Missing check_run property');
         }
 
+        if (typeof ghEvent.check_run.id !== 'number') {
+            ctx.throw(400, 'Missing or non-number check_run.id property');
+        }
+
         if (typeof ghEvent.check_run.head_sha !== 'string') {
-            ctx.throw(400, 'Missing or invalid check_run.head_sha property');
+            ctx.throw(400, 'Missing or non-string check_run.head_sha property');
         }
 
         if (typeof ghEvent.check_run.external_id !== 'string') {
-            ctx.throw(400, 'Missing or invalid check_run.external_id property');
+            ctx.throw(400, 'Missing or non-string check_run.external_id property');
         }
 
-        // Extract the repo and execution IDs.
-        const externalIdMatch = ghEvent.check_run.external_id.match(/^(.+)\/execution\/(.+)$/);
-
-        if (!externalIdMatch) {
-            ctx.throw(400, 'Invalid external_id');
-        }
-
-        if (!util.isValidRepoId(externalIdMatch[1])) {
-            ctx.throw(400, 'Invalid repo ID in external_id');
-        }
-
-        if (!util.isValidExecutionId(externalIdMatch[2])) {
-            ctx.throw(400, 'Invalid exectuion ID in external_id');
+        if (!util.parseLongExecutionId(ghEvent.check_run.external_id)) {
+            ctx.throw(400, 'Invalid format for check_run.external_id property');
         }
     }
+
+    const baseEventObject = ghEvent[gitHubEventType];
+
+    if (!Array.isArray(baseEventObject.pull_requests)) {
+        ctx.throw(400, `Missing or invalid ${gitHubEventType}.pull_requests property`);
+    }
+
+    baseEventObject.pull_requests.forEach((pullRequest, i) => {
+        if (typeof pullRequest.id !== 'number') {
+            ctx.throw(400, `Missing or non-number ${gitHubEventType}.pull_requests.${i}.id property`);
+        }
+
+        if (typeof pullRequest.number !== 'number') {
+            ctx.throw(400, `Missing or non-number pull_request.${i}.number property`);
+        }
+
+        if (typeof pullRequest.head.ref !== 'string') {
+            ctx.throw(400, `Missing or non-string ${gitHubEventType}.pull_requests.${i}.head.ref`);
+        }
+
+        if (typeof pullRequest.head.sha !== 'string' || !util.isValidSha(pullRequest.head.sha)) {
+            ctx.throw(400, `Missing or invalid ${gitHubEventType}.pull_requests.${i}.head.sha`);
+        }
+
+        if (!pullRequest.base) {
+            ctx.throw(400, `Missing ${gitHubEventType}.pull_requests.${i}.base property`);
+        }
+
+        if (typeof pullRequest.base.ref !== 'string') {
+            ctx.throw(400, `Missing or non-string ${gitHubEventType}.pull_requests.${i}.base.ref`);
+        }
+
+        if (typeof pullRequest.base.sha !== 'string' || !util.isValidSha(pullRequest.base.sha)) {
+            ctx.throw(400, `Missing or invalid ${gitHubEventType}.pull_requests.${i}.base.sha`);
+        }
+    });
 
     if (!ghEvent.sender) {
         ctx.throw(400, 'Missing sender property');
     }
 
+    if (typeof ghEvent.sender.id !== 'number') {
+        ctx.throw(400, 'Missing or non-number sender.id property');
+    }
+
     if (typeof ghEvent.sender.login !== 'string') {
-        ctx.throw(400, 'Missing or invalid sender.login property');
+        ctx.throw(400, 'Missing or non-string sender.login property');
+    }
+
+    if (typeof ghEvent.sender.type !== 'string') {
+        ctx.throw(400, 'Missing or non-string sender.type property');
     }
 }

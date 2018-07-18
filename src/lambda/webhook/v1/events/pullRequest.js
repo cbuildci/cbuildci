@@ -125,8 +125,31 @@ module.exports = async function handlePullRequestEvent(ctx, ghEvent, repoConfig)
         token,
         tokenExpiration,
         repoConfig,
-        ghEvent.repository.owner.id,
-        ghEvent.repository.id,
+        {
+            id: ghEvent.repository.owner.id,
+            login: ghEvent.repository.owner.login,
+            type: ghEvent.repository.owner.type,
+        },
+        {
+            id: ghEvent.repository.id,
+            name: ghEvent.repository.name,
+        },
+        {
+            event: 'pull_request',
+            action: ghEvent.action,
+            pull_request: {
+                id: ghEvent.pull_request.id,
+                number: ghEvent.pull_request.number,
+                head: {
+                    ref: ghEvent.pull_request.head.ref,
+                    sha: ghEvent.pull_request.head.sha,
+                },
+                base: {
+                    ref: ghEvent.pull_request.base.ref,
+                    sha: ghEvent.pull_request.base.sha,
+                },
+            },
+        },
         isForGitHubApp ? ghEvent.installation.id : null,
         ghEvent.pull_request.head.sha,
     );
@@ -143,7 +166,31 @@ function validatePullRequestEvent(ctx, ghEvent) {
         ctx.throw(400, 'Missing pull_request.head property');
     }
 
-    if (typeof ghEvent.pull_request.head.sha !== 'string' || !ghEvent.pull_request.head.sha.match(/^[0-9a-f]{40}$/)) {
-        ctx.throw(400, 'Invalid or missing pull_request.head.sha');
+    if (typeof ghEvent.pull_request.id !== 'number') {
+        ctx.throw(400, 'Missing or invalid pull_request.id property');
+    }
+
+    if (typeof ghEvent.pull_request.number !== 'number') {
+        ctx.throw(400, 'Missing or invalid pull_request.number property');
+    }
+
+    if (typeof ghEvent.pull_request.head.ref !== 'string') {
+        ctx.throw(400, 'Missing or non-string pull_request.head.ref');
+    }
+
+    if (typeof ghEvent.pull_request.head.sha !== 'string' || !util.isValidSha(ghEvent.pull_request.head.sha)) {
+        ctx.throw(400, 'Missing or invalid pull_request.head.sha');
+    }
+
+    if (!ghEvent.pull_request.base) {
+        ctx.throw(400, 'Missing pull_request.base property');
+    }
+
+    if (typeof ghEvent.pull_request.base.ref !== 'string') {
+        ctx.throw(400, 'Missing or non-string pull_request.base.ref');
+    }
+
+    if (typeof ghEvent.pull_request.base.sha !== 'string' || !util.isValidSha(ghEvent.pull_request.base.sha)) {
+        ctx.throw(400, 'Invalid or missing pull_request.base.sha');
     }
 }

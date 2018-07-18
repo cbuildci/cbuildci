@@ -251,7 +251,14 @@ exports.getLock = async function getLock(tableName, id, serviceParams = {}) {
     );
 };
 
-exports.attemptLock = async function attemptLock(tableName, id, traceId, meta, timeoutSeconds, serviceParams = {}) {
+exports.attemptLock = async function attemptLock(
+    tableName,
+    id,
+    traceId,
+    meta,
+    timeoutSeconds,
+    serviceParams = {},
+) {
     const dynamoDB = new AWS.DynamoDB({
         apiVersion: '2012-08-10',
         region: AWS_REGION,
@@ -284,7 +291,7 @@ exports.attemptLock = async function attemptLock(tableName, id, traceId, meta, t
 exports.updateLock = async function updateLock(
     tableName,
     id,
-    executionId,
+    traceId,
     meta = null,
     serviceParams = {},
 ) {
@@ -294,7 +301,7 @@ exports.updateLock = async function updateLock(
     };
     const ExpressionAttributeValues = {
         ':time': Date.now(),
-        ':hash': executionId,
+        ':trace': traceId,
     };
 
     if (meta) {
@@ -322,7 +329,7 @@ exports.updateLock = async function updateLock(
             id,
         },
         UpdateExpression,
-        ConditionExpression: 'attribute_exists(executionId) AND executionId = :hash',
+        ConditionExpression: 'attribute_exists(traceId) AND traceId = :trace',
         ExpressionAttributeNames,
         ExpressionAttributeValues,
         ReturnValues: 'ALL_OLD',
@@ -331,7 +338,12 @@ exports.updateLock = async function updateLock(
     return response.Attributes;
 };
 
-exports.releaseLock = async function releaseLock(tableName, id, executionId, serviceParams = {}) {
+exports.releaseLock = async function releaseLock(
+    tableName,
+    id,
+    traceId,
+    serviceParams = {},
+) {
     const dynamoDB = new AWS.DynamoDB({
         apiVersion: '2012-08-10',
         region: AWS_REGION,
@@ -347,9 +359,9 @@ exports.releaseLock = async function releaseLock(tableName, id, executionId, ser
         Key: {
             id,
         },
-        ConditionExpression: 'executionId = :hash',
+        ConditionExpression: 'traceId = :trace',
         ExpressionAttributeValues: {
-            ':hash': executionId,
+            ':trace': traceId,
         },
     }).promise();
 };
@@ -362,11 +374,14 @@ exports.getNextExecutionId = async function getNextExecutionId(
 ) {
     const records = await exports.queryTableItem(
         tableName,
-        'id = :id and begins_with(executionId, :cs',
-        {},
+        '#id = :id and begins_with(#cs, :cs)',
+        {
+            '#id': 'repoId',
+            '#cs': 'executionId',
+        },
         {
             ':id': repoId,
-            ':cs': `${commitSHA}.`,
+            ':cs': `${commitSHA}/`,
         },
         {
             limit: 1,
@@ -376,8 +391,8 @@ exports.getNextExecutionId = async function getNextExecutionId(
     );
 
     return records.items.length
-        ? `${commitSHA}.${parseInt(records.items[0].id.split('.')[1]) + 1}`
-        : `${commitSHA}.1`;
+        ? `${commitSHA}/${parseInt(records.items[0].executionId.split('/')[1]) + 1}`
+        : `${commitSHA}/1`;
 };
 
 exports.getExecution = async function getExecution(tableName, repoId, executionId, serviceParams = {}) {

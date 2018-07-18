@@ -52,8 +52,9 @@ exports.startExecution = async function startExecution(
     token,
     tokenExpiration,
     repoConfig,
-    githubOwnerId,
-    githubRepoId,
+    githubOwner,
+    githubRepo,
+    initiator,
     installationId,
     commitSHA
 ) {
@@ -191,8 +192,6 @@ exports.startExecution = async function startExecution(
      * @property {string} runTask
      * @property {string} errorInfo
      * @property {string} repoId
-     * @property {number} githubOwnerId
-     * @property {number} githubRepoId
      * @property {number|null} installationId
      * @property {string} executionId
      * @property {string} checksName
@@ -212,10 +211,9 @@ exports.startExecution = async function startExecution(
         waitSeconds: repoConfig.waitSeconds,
         errorInfo: null,
         repoId: repoConfig.id,
-        githubOwnerId,
-        githubRepoId,
         installationId,
         executionId: '',
+        traceId: ctx.req.traceId,
         checksName: ymlConfig.checksName,
         checksRunId: null,
         encryptedOAuthToken: isForGitHubApp
@@ -243,7 +241,7 @@ exports.startExecution = async function startExecution(
         const prevLock = await aws.attemptLock(
             ctx.ciApp.tableLocksName,
             lockId,
-            ctx.req.traceId,
+            state.traceId,
             {},
             ctx.ciApp.lockTimeoutSeconds,
         );
@@ -282,9 +280,10 @@ exports.startExecution = async function startExecution(
         state.executionId,
         {
             installationId: state.installationId,
-            githubOwnerId: state.githubOwnerId,
-            githubRepoId: state.githubRepoId,
-            webhookTraceId: ctx.req.traceId,
+            githubOwner,
+            githubRepo,
+            initiator,
+            webhookTraceId: state.traceId,
         },
         state,
     );
@@ -299,9 +298,8 @@ exports.startExecution = async function startExecution(
             state.checksName,
             commitSHA,
             {
-                // TODO: Change to web UI url
-                details_url: `${ctx.ciApp.baseUrl}/api/v1/repo/${state.repoId}/execution/${state.executionId}`,
-                external_id: `${state.repoId}/execution/${state.executionId}`,
+                details_url: `${ctx.ciApp.baseUrl}/app/repo/${state.repoId}/execution/${state.executionId}`,
+                external_id: `${state.repoId}/${state.executionId}`,
                 status: 'queued',
                 started_at: Date.now(),
                 actions: [
@@ -346,5 +344,6 @@ exports.startExecution = async function startExecution(
         lockId,
         executionArn: execResult.executionArn,
         executionId: state.executionId,
+        traceId: state.traceId,
     };
 };
