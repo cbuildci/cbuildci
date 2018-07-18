@@ -9,9 +9,14 @@ describe('util', () => {
 
     it('should have expected exports', () => {
         expect(Object.keys(util).sort()).to.deep.equal([
+            'isValidGitHubUser',
+            'isValidGitHubRepo',
+            'isValidSha',
             'buildRepoId',
             'parseRepoId',
             'isValidRepoId',
+            'parseExecutionId',
+            'parseLongExecutionId',
             'isValidExecutionId',
             'buildLockId',
             'hasSpecialLabel',
@@ -19,6 +24,63 @@ describe('util', () => {
             'convertToRegex',
             'cacheAsyncResult',
         ].sort());
+    });
+
+    describe('isValidGitHubUser', () => {
+        it('should return true for valid user names', () => {
+            expect(util.isValidGitHubUser('a'))
+                .to.equal(true);
+
+            expect(util.isValidGitHubUser('0'))
+                .to.equal(true);
+
+            expect(util.isValidGitHubUser('a'.repeat(39)))
+                .to.equal(true);
+
+            expect(util.isValidGitHubUser('a-1-2-d'))
+                .to.equal(true);
+
+            expect(util.isValidGitHubUser('abc-1def-2344-daef'))
+                .to.equal(true);
+        });
+
+        it('should return false for invalid user names', () => {
+            expect(util.isValidGitHubUser('-'))
+                .to.equal(false);
+
+            expect(util.isValidGitHubUser('-a'))
+                .to.equal(false);
+
+            expect(util.isValidGitHubUser('-a'))
+                .to.equal(false);
+
+            expect(util.isValidGitHubUser('-a-'))
+                .to.equal(false);
+
+            expect(util.isValidGitHubUser('a--b'))
+                .to.equal(false);
+
+            expect(util.isValidGitHubUser('a'.repeat(40)))
+                .to.equal(false);
+        });
+    });
+
+    describe('isValidSha', () => {
+        it('should return true for valid SHAs', () => {
+            expect(util.isValidSha('204f627a1d310e50725d3a7fa6a7bacc65a3cc89'))
+                .to.equal(true);
+
+            expect(util.isValidSha('204F627A1D310E50725D3A7FA6A7BACC65A3CC89'))
+                .to.equal(true);
+        });
+
+        it('should return false for invalid SHAs', () => {
+            expect(util.isValidSha('204f627a1d310e50725d3a7fa6a7bacc65a3cc8'))
+                .to.equal(false);
+
+            expect(util.isValidSha('204F627A1D310E50725D3A7FA6A7BACC65A3CC89a'))
+                .to.equal(false);
+        });
     });
 
     describe('buildRepoId', () => {
@@ -29,7 +91,7 @@ describe('util', () => {
     });
 
     describe('parseRepoId', () => {
-        it('should produce the expected id', () => {
+        it('should produce the expected values', () => {
             expect(util.parseRepoId('USeR/rePO'))
                 .to.deep.equal({
                     owner: 'user',
@@ -71,12 +133,82 @@ describe('util', () => {
         });
     });
 
+    describe('parseExecutionId', () => {
+        it('should produce the expected values', () => {
+            expect(util.parseExecutionId('ABCF627a1d310e50725d3a7fa6a7bacc65a3cc89/5'))
+                .to.deep.equal({
+                    sha: 'abcf627a1d310e50725d3a7fa6a7bacc65a3cc89',
+                    executionId: '5',
+                });
+
+            expect(util.parseExecutionId('204f627a1d310e50725d3a7fa6a7bacc65a3cc89/9999'))
+                .to.deep.equal({
+                    sha: '204f627a1d310e50725d3a7fa6a7bacc65a3cc89',
+                    executionId: '9999',
+                });
+        });
+
+        it('should return null or invalid values', () => {
+            expect(util.parseExecutionId(null))
+                .to.equal(null);
+
+            expect(util.parseExecutionId(''))
+                .to.equal(null);
+
+            expect(util.parseExecutionId('ABCF627a1d310e50725d3a7fa6a7bacc65a3cc8/5'))
+                .to.equal(null);
+
+            expect(util.parseExecutionId('204f627a1d310e50725d3a7fa6a7bacc65a3cc89'))
+                .to.equal(null);
+
+            expect(util.parseExecutionId('ABCF627a1d310e50725d3a7fa6a7bacc65a3cc8/5/5'))
+                .to.equal(null);
+        });
+    });
+
+    describe('parseLongExecutionId', () => {
+        it('should produce the expected values for valid execution IDs', () => {
+            expect(util.parseLongExecutionId('USeR/rePO/ABCF627a1d310e50725d3a7fa6a7bacc65a3cc89/5'))
+                .to.deep.equal({
+                    owner: 'user',
+                    repo: 'repo',
+                    sha: 'abcf627a1d310e50725d3a7fa6a7bacc65a3cc89',
+                    executionId: '5',
+                });
+
+            expect(util.parseLongExecutionId('USeR/rePO/204f627a1d310e50725d3a7fa6a7bacc65a3cc89/9999'))
+                .to.deep.equal({
+                    owner: 'user',
+                    repo: 'repo',
+                    sha: '204f627a1d310e50725d3a7fa6a7bacc65a3cc89',
+                    executionId: '9999',
+                });
+        });
+
+        it('should return null or invalid values', () => {
+            expect(util.parseLongExecutionId(null))
+                .to.equal(null);
+
+            expect(util.parseLongExecutionId(''))
+                .to.equal(null);
+
+            expect(util.parseLongExecutionId('USeR/rePO/ABCF627a1d310e50725d3a7fa6a7bacc65a3cc8/5'))
+                .to.equal(null);
+
+            expect(util.parseLongExecutionId('USeR/rePO/204f627a1d310e50725d3a7fa6a7bacc65a3cc89'))
+                .to.equal(null);
+
+            expect(util.parseLongExecutionId('USeR/rePO/ABCF627a1d310e50725d3a7fa6a7bacc65a3cc8/5/5'))
+                .to.equal(null);
+        });
+    });
+
     describe('isValidExecutionId', () => {
         it('should return true for valid execution IDs', () => {
-            expect(util.isValidExecutionId('a9eb85ea214a6cfa6882f4be041d5cce7bee3e45.1'))
+            expect(util.isValidExecutionId('ABCF627a1d310e50725d3a7fa6a7bacc65a3cc89/1'))
                 .to.equal(true);
 
-            expect(util.isValidExecutionId('a9eb85ea214a6cfa6882f4be041d5cce7bee3e45.9999'))
+            expect(util.isValidExecutionId('abcf627a1d310e50725d3a7fa6a7bacc65a3cc89/9999'))
                 .to.equal(true);
         });
 
@@ -87,19 +219,22 @@ describe('util', () => {
             expect(util.isValidExecutionId(''))
                 .to.equal(false);
 
-            expect(util.isValidExecutionId('a9eb85ea214a6cfa6882f4be041d5cce7bee3e45.0'))
+            expect(util.isValidExecutionId('0'))
                 .to.equal(false);
 
-            expect(util.isValidExecutionId('a9eb85ea214a6cfa6882f4be041d5cce7bee3e45.0001'))
+            expect(util.isValidExecutionId('abcf627a1d310e50725d3a7fa6a7bacc65a3cc89/0'))
                 .to.equal(false);
 
-            expect(util.isValidExecutionId('A9EB85EA214A6CFA6882F4BE041D5CCE7BEE3E45.1'))
+            expect(util.isValidExecutionId('abcf627a1d310e50725d3a7fa6a7bacc65a3cc89/0001'))
                 .to.equal(false);
 
-            expect(util.isValidExecutionId('a9eb85ea214a6cfa6882f4be041d5cce7bee3e45.10000'))
+            expect(util.isValidExecutionId('abcf627a1d310e50725d3a7fa6a7bacc65a3cc89/10000'))
                 .to.equal(false);
 
-            expect(util.isValidExecutionId('a9eb85ea214a6cfa6882f4be041d5cce7bee3e45.99999'))
+            expect(util.isValidExecutionId('abcf627a1d310e50725d3a7fa6a7bacc65a3cc89/99999'))
+                .to.equal(false);
+
+            expect(util.isValidExecutionId('abcf627a1d310e50725d3a7fa6a7bacc65a3cc89/99999'))
                 .to.equal(false);
         });
     });

@@ -1,6 +1,39 @@
 'use strict';
 
 /**
+ * Validate a GitHub user or organization name.
+ *
+ * @param {string} owner
+ * @returns {boolean}
+ */
+exports.isValidGitHubUser = function isValidGitHubUser(owner) {
+    return typeof owner === 'string'
+        && owner.length <= 39
+        && !!owner.match(/^(?:[a-z0-9](?:-?[a-z0-9]+)*)$/i);
+};
+
+/**
+ * Validate a GitHub repository name.
+ *
+ * @param {string} repo
+ * @returns {boolean}
+ */
+exports.isValidGitHubRepo = function isValidGitHubRepo(repo) {
+    return typeof repo === 'string'
+        && !!repo.match(/^[_\-.a-z0-9]{1,100}$/i);
+};
+
+/**
+ * Validate a SHA1 string.
+ *
+ * @param {string} sha
+ * @returns {boolean}
+ */
+exports.isValidSha = function isValidSha(sha) {
+    return typeof sha === 'string' && !!sha.match(/^[0-9a-f]{40}$/i);
+};
+
+/**
  * Build a repo ID.
  *
  * @param {string} owner
@@ -18,11 +51,24 @@ exports.buildRepoId = function buildRepoId(owner, repo) {
  * @returns {{ owner: string, repo: string }|null}
  */
 exports.parseRepoId = function parseRepoId(id) {
-    const match = typeof id === 'string' && id.toLowerCase().match(/^([^/ ]+)\/([^/ ]+)$/);
-    return match ? {
-        owner: match[1],
-        repo: match[2],
-    } : null;
+    if (typeof id !== 'string') {
+        return null;
+    }
+
+    const [owner, repo, ...extra] = id.toLowerCase().split('/');
+
+    if (extra.length) {
+        return null;
+    }
+
+    if (!exports.isValidGitHubUser(owner) || !exports.isValidGitHubRepo(repo)) {
+        return null;
+    }
+
+    return {
+        owner,
+        repo,
+    };
 };
 
 /**
@@ -36,13 +82,75 @@ exports.isValidRepoId = function isValidRepoId(id) {
 };
 
 /**
+ * Split an execution ID into its parts, or null if it is invalid.
+ *
+ * @param {string} id
+ * @returns {{ sha: string, executionId: string }|null}
+ */
+exports.parseExecutionId = function parseExecutionId(id) {
+    if (typeof id !== 'string') {
+        return null;
+    }
+
+    const [sha, executionId, ...extra] = id.toLowerCase().split('/');
+
+    if (extra.length) {
+        return null;
+    }
+
+    if (!exports.isValidSha(sha)
+        || typeof executionId !== 'string'
+        || !executionId.match(/^[1-9][0-9]{0,3}$/)) {
+        return null;
+    }
+
+    return {
+        sha,
+        executionId,
+    };
+};
+
+/**
+ * Split an execution ID into its parts, or null if it is invalid.
+ *
+ * @param {string} id
+ * @returns {{ owner: string, repo: string, sha: string, executionId: string }|null}
+ */
+exports.parseLongExecutionId = function parseLongExecutionId(id) {
+    if (typeof id !== 'string') {
+        return null;
+    }
+
+    const [owner, repo, sha, executionId, ...extra] = id.toLowerCase().split('/');
+
+    if (extra.length) {
+        return null;
+    }
+
+    if (!exports.isValidGitHubUser(owner)
+        || !exports.isValidGitHubRepo(repo)
+        || !exports.isValidSha(sha)
+        || typeof executionId !== 'string'
+        || !executionId.match(/^[1-9][0-9]{0,3}$/)) {
+        return null;
+    }
+
+    return {
+        owner,
+        repo,
+        sha,
+        executionId,
+    };
+};
+
+/**
  * Validate an execution ID.
  *
  * @param {string} id
  * @returns {boolean}
  */
 exports.isValidExecutionId = function isValidExecutionId(id) {
-    return typeof id === 'string' && !!id.match(/^[0-9a-f]{5,40}\.[1-9][0-9]{0,3}$/);
+    return !!exports.parseExecutionId(id);
 };
 
 /**
