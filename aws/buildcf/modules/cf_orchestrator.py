@@ -956,6 +956,43 @@ def create_template():
         # Body = apigateway_swagger,
     ))
 
+    t.add_resource(Method(
+        "RootGetMethod",
+        RestApiId = Ref(r_rest_api),
+        ResourceId = GetAtt(r_rest_api, "RootResourceId"),
+        HttpMethod = "GET",
+        AuthorizationType = "NONE",
+        MethodResponses = [
+            MethodResponse(
+                StatusCode = "302",
+                ResponseParameters = {
+                    "method.response.header.Location": True,
+                },
+            ),
+        ],
+        Integration = Integration(
+            Type = "MOCK",
+            Credentials = GetAtt(r_rest_api_app_static_s3_role, "Arn"),
+            IntegrationHttpMethod = "GET",
+            PassthroughBehavior = "WHEN_NO_TEMPLATES",
+            RequestTemplates = {
+                # "application/json": "{ \"statusCode\": 302 }",
+                "text/html": "{ \"statusCode\": 302 }",
+            },
+            IntegrationResponses = [
+                IntegrationResponse(
+                    StatusCode = "302",
+                    ResponseParameters = {
+                        "method.response.header.Location": "'app/'",
+                    },
+                    ResponseTemplates = {
+                        "text/html": "#set($inputRoot = $input.path('$'))"
+                    },
+                ),
+            ],
+        ),
+    ))
+
     r_app_resource = t.add_resource(Resource(
         "AppResource",
         RestApiId = Ref(r_rest_api),

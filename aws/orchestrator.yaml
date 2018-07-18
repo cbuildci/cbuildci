@@ -1101,6 +1101,30 @@ Resources:
       - ApiLambda
       - ApiGatewayAppStaticS3Role
       - WebhookLambda
+  RootGetMethod:
+    Properties:
+      RestApiId: !Ref 'RestApi'
+      ResourceId: !GetAtt 'RestApi.RootResourceId'
+      HttpMethod: GET
+      AuthorizationType: NONE
+      MethodResponses:
+        - StatusCode: '302'
+          ResponseParameters:
+            method.response.header.Location: true
+      Integration:
+        Type: MOCK
+        Credentials: !GetAtt 'ApiGatewayAppStaticS3Role.Arn'
+        IntegrationHttpMethod: GET
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        RequestTemplates:
+          text/html: '{ "statusCode": 302 }'
+        IntegrationResponses:
+          - StatusCode: '302'
+            ResponseParameters:
+              method.response.header.Location: '''app/'''
+            ResponseTemplates:
+              text/html: '#set($inputRoot = $input.path(''$''))'
+    Type: AWS::ApiGateway::Method
   AppResource:
     Properties:
       RestApiId: !Ref 'RestApi'
