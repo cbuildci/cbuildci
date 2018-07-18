@@ -295,6 +295,7 @@ def create_template():
                                 )),
                             ],
                             Action = [
+                                ac_dynamodb.Query,
                                 ac_dynamodb.GetItem,
                                 ac_dynamodb.BatchGetItem,
                             ],
@@ -389,6 +390,7 @@ def create_template():
                                 )),
                             ],
                             Action = [
+                                ac_dynamodb.Query,
                                 ac_dynamodb.GetItem,
                                 ac_dynamodb.BatchGetItem,
                             ],
@@ -954,10 +956,17 @@ def create_template():
         # Body = apigateway_swagger,
     ))
 
+    r_app_resource = t.add_resource(Resource(
+        "AppResource",
+        RestApiId = Ref(r_rest_api),
+        PathPart = "app",
+        ParentId = GetAtt(r_rest_api, "RootResourceId"),
+    ))
+
     t.add_resource(Method(
         "AppGetMethod",
         RestApiId = Ref(r_rest_api),
-        ResourceId = GetAtt(r_rest_api, "RootResourceId"),
+        ResourceId = Ref(r_app_resource),
         HttpMethod = "GET",
         AuthorizationType = "NONE",
         MethodResponses = [
@@ -985,25 +994,17 @@ def create_template():
                 IntegrationResponse(
                     StatusCode = "200",
                     ResponseParameters = {
-                        "method.response.header.Content-Type":
-                            "integration.response.header.Content-Type",
+                        "method.response.header.Content-Type": "'text/html'",
                     },
                 ),
             ],
         ),
     ))
 
-    r_app_resource = t.add_resource(Resource(
-        "AppResource",
-        RestApiId = Ref(r_rest_api),
-        PathPart = "static",
-        ParentId = GetAtt(r_rest_api, "RootResourceId"),
-    ))
-
     r_app_proxy_resource = t.add_resource(Resource(
         "AppProxyResource",
         RestApiId = Ref(r_rest_api),
-        PathPart = "{item}",
+        PathPart = "{proxy+}",
         ParentId = Ref(r_app_resource),
     ))
 
@@ -1011,6 +1012,58 @@ def create_template():
         "AppProxyMethod",
         RestApiId = Ref(r_rest_api),
         ResourceId = Ref(r_app_proxy_resource),
+        HttpMethod = "GET",
+        AuthorizationType = "NONE",
+        MethodResponses = [
+            MethodResponse(
+                StatusCode = "200",
+                ResponseParameters = {
+                    "method.response.header.Content-Type": True,
+                },
+            ),
+        ],
+        Integration = Integration(
+            Type = "AWS",
+            Credentials = GetAtt(r_rest_api_app_static_s3_role, "Arn"),
+            IntegrationHttpMethod = "GET",
+            PassthroughBehavior = "WHEN_NO_TEMPLATES",
+            Uri = Sub(
+                "arn:aws:apigateway:%s:s3:path/%s/%s"
+                % (
+                    "${AWS::Region}",
+                    "${ArtifactBucketName}",
+                    "${AppStaticKeyPrefix}index.html",
+                )
+            ),
+            IntegrationResponses = [
+                IntegrationResponse(
+                    StatusCode = "200",
+                    ResponseParameters = {
+                        "method.response.header.Content-Type": "'text/html'",
+                    },
+                ),
+            ],
+        ),
+    ))
+
+    r_static_resource = t.add_resource(Resource(
+        "StaticResource",
+        RestApiId = Ref(r_rest_api),
+        PathPart = "static",
+        ParentId = GetAtt(r_rest_api, "RootResourceId"),
+    ))
+
+    r_static_proxy_resource = t.add_resource(Resource(
+        "StaticProxyResource",
+        RestApiId = Ref(r_rest_api),
+        PathPart = "{item}",
+        ParentId = Ref(r_static_resource),
+    ))
+
+    t.add_resource(Method(
+        "StaticProxyMethod",
+        RestApiId = Ref(r_rest_api),
+        ResourceId = Ref(r_static_proxy_resource),
         HttpMethod = "GET",
         AuthorizationType = "NONE",
         RequestParameters = {
@@ -1021,6 +1074,7 @@ def create_template():
                 StatusCode = "200",
                 ResponseParameters = {
                     "method.response.header.Content-Type": True,
+                    "method.response.header.Cache-Control": True,
                 },
             ),
         ],
@@ -1046,6 +1100,7 @@ def create_template():
                     ResponseParameters = {
                         "method.response.header.Content-Type":
                             "integration.response.header.Content-Type",
+                        "method.response.header.Cache-Control": "'max-age=300'"
                     },
                 ),
             ],

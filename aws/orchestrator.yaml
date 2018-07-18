@@ -321,6 +321,7 @@ Resources:
                   - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${LocksTableName}'
                   - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ExecutionsTableName}'
                 Action:
+                  - dynamodb:Query
                   - dynamodb:GetItem
                   - dynamodb:BatchGetItem
               - Effect: Allow
@@ -360,6 +361,7 @@ Resources:
                   - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${SessionsTableName}'
                   - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ExecutionsTableName}'
                 Action:
+                  - dynamodb:Query
                   - dynamodb:GetItem
                   - dynamodb:BatchGetItem
               - Effect: Allow
@@ -1099,10 +1101,16 @@ Resources:
       - ApiLambda
       - ApiGatewayAppStaticS3Role
       - WebhookLambda
+  AppResource:
+    Properties:
+      RestApiId: !Ref 'RestApi'
+      PathPart: app
+      ParentId: !GetAtt 'RestApi.RootResourceId'
+    Type: AWS::ApiGateway::Resource
   AppGetMethod:
     Properties:
       RestApiId: !Ref 'RestApi'
-      ResourceId: !GetAtt 'RestApi.RootResourceId'
+      ResourceId: !Ref 'AppResource'
       HttpMethod: GET
       AuthorizationType: NONE
       MethodResponses:
@@ -1118,18 +1126,12 @@ Resources:
         IntegrationResponses:
           - StatusCode: '200'
             ResponseParameters:
-              method.response.header.Content-Type: integration.response.header.Content-Type
+              method.response.header.Content-Type: '''text/html'''
     Type: AWS::ApiGateway::Method
-  AppResource:
-    Properties:
-      RestApiId: !Ref 'RestApi'
-      PathPart: static
-      ParentId: !GetAtt 'RestApi.RootResourceId'
-    Type: AWS::ApiGateway::Resource
   AppProxyResource:
     Properties:
       RestApiId: !Ref 'RestApi'
-      PathPart: '{item}'
+      PathPart: '{proxy+}'
       ParentId: !Ref 'AppResource'
     Type: AWS::ApiGateway::Resource
   AppProxyMethod:
@@ -1138,12 +1140,46 @@ Resources:
       ResourceId: !Ref 'AppProxyResource'
       HttpMethod: GET
       AuthorizationType: NONE
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Content-Type: true
+      Integration:
+        Type: AWS
+        Credentials: !GetAtt 'ApiGatewayAppStaticS3Role.Arn'
+        IntegrationHttpMethod: GET
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:s3:path/${ArtifactBucketName}/${AppStaticKeyPrefix}index.html'
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Content-Type: '''text/html'''
+    Type: AWS::ApiGateway::Method
+  StaticResource:
+    Properties:
+      RestApiId: !Ref 'RestApi'
+      PathPart: static
+      ParentId: !GetAtt 'RestApi.RootResourceId'
+    Type: AWS::ApiGateway::Resource
+  StaticProxyResource:
+    Properties:
+      RestApiId: !Ref 'RestApi'
+      PathPart: '{item}'
+      ParentId: !Ref 'StaticResource'
+    Type: AWS::ApiGateway::Resource
+  StaticProxyMethod:
+    Properties:
+      RestApiId: !Ref 'RestApi'
+      ResourceId: !Ref 'StaticProxyResource'
+      HttpMethod: GET
+      AuthorizationType: NONE
       RequestParameters:
         method.request.path.item: true
       MethodResponses:
         - StatusCode: '200'
           ResponseParameters:
             method.response.header.Content-Type: true
+            method.response.header.Cache-Control: true
       Integration:
         Type: AWS
         Credentials: !GetAtt 'ApiGatewayAppStaticS3Role.Arn'
@@ -1156,6 +1192,7 @@ Resources:
           - StatusCode: '200'
             ResponseParameters:
               method.response.header.Content-Type: integration.response.header.Content-Type
+              method.response.header.Cache-Control: '''max-age=300'''
     Type: AWS::ApiGateway::Method
   WebhookResource:
     Properties:
