@@ -15,6 +15,7 @@ describe('util', () => {
             'buildRepoId',
             'parseRepoId',
             'isValidRepoId',
+            'buildExecutionId',
             'parseExecutionId',
             'parseLongExecutionId',
             'isValidExecutionId',
@@ -133,18 +134,46 @@ describe('util', () => {
         });
     });
 
+    describe('buildExecutionId', () => {
+        it('should return execution ID', () => {
+            expect(util.buildExecutionId(
+                'ABCF627a1d310e50725d3a7fa6a7bacc65a3cc89',
+                5,
+            ))
+                .to.equal('abcf627a1d310e50725d3a7fa6a7bacc65a3cc89/0005');
+
+            expect(util.buildExecutionId(
+                'abcf627a1d310e50725d3a7fa6a7bacc65a3cc89',
+                50,
+            ))
+                .to.equal('abcf627a1d310e50725d3a7fa6a7bacc65a3cc89/0050');
+
+            expect(util.buildExecutionId(
+                'abcf627a1d310e50725d3a7fa6a7bacc65a3cc89',
+                500,
+            ))
+                .to.equal('abcf627a1d310e50725d3a7fa6a7bacc65a3cc89/0500');
+
+            expect(util.buildExecutionId(
+                'abcf627a1d310e50725d3a7fa6a7bacc65a3cc89',
+                5000,
+            ))
+                .to.equal('abcf627a1d310e50725d3a7fa6a7bacc65a3cc89/5000');
+        });
+    });
+
     describe('parseExecutionId', () => {
         it('should produce the expected values', () => {
-            expect(util.parseExecutionId('ABCF627a1d310e50725d3a7fa6a7bacc65a3cc89/5'))
+            expect(util.parseExecutionId('ABCF627a1d310e50725d3a7fa6a7bacc65a3cc89/0005'))
                 .to.deep.equal({
-                    sha: 'abcf627a1d310e50725d3a7fa6a7bacc65a3cc89',
-                    executionId: '5',
+                    commit: 'abcf627a1d310e50725d3a7fa6a7bacc65a3cc89',
+                    executionNum: 5,
                 });
 
             expect(util.parseExecutionId('204f627a1d310e50725d3a7fa6a7bacc65a3cc89/9999'))
                 .to.deep.equal({
-                    sha: '204f627a1d310e50725d3a7fa6a7bacc65a3cc89',
-                    executionId: '9999',
+                    commit: '204f627a1d310e50725d3a7fa6a7bacc65a3cc89',
+                    executionNum: 9999,
                 });
         });
 
@@ -168,20 +197,20 @@ describe('util', () => {
 
     describe('parseLongExecutionId', () => {
         it('should produce the expected values for valid execution IDs', () => {
-            expect(util.parseLongExecutionId('USeR/rePO/ABCF627a1d310e50725d3a7fa6a7bacc65a3cc89/5'))
+            expect(util.parseLongExecutionId('USeR/rePO/ABCF627a1d310e50725d3a7fa6a7bacc65a3cc89/0005'))
                 .to.deep.equal({
                     owner: 'user',
                     repo: 'repo',
-                    sha: 'abcf627a1d310e50725d3a7fa6a7bacc65a3cc89',
-                    executionId: '5',
+                    commit: 'abcf627a1d310e50725d3a7fa6a7bacc65a3cc89',
+                    executionNum: 5,
                 });
 
             expect(util.parseLongExecutionId('USeR/rePO/204f627a1d310e50725d3a7fa6a7bacc65a3cc89/9999'))
                 .to.deep.equal({
                     owner: 'user',
                     repo: 'repo',
-                    sha: '204f627a1d310e50725d3a7fa6a7bacc65a3cc89',
-                    executionId: '9999',
+                    commit: '204f627a1d310e50725d3a7fa6a7bacc65a3cc89',
+                    executionNum: 9999,
                 });
         });
 
@@ -205,7 +234,7 @@ describe('util', () => {
 
     describe('isValidExecutionId', () => {
         it('should return true for valid execution IDs', () => {
-            expect(util.isValidExecutionId('ABCF627a1d310e50725d3a7fa6a7bacc65a3cc89/1'))
+            expect(util.isValidExecutionId('ABCF627a1d310e50725d3a7fa6a7bacc65a3cc89/0001'))
                 .to.equal(true);
 
             expect(util.isValidExecutionId('abcf627a1d310e50725d3a7fa6a7bacc65a3cc89/9999'))
@@ -225,7 +254,13 @@ describe('util', () => {
             expect(util.isValidExecutionId('abcf627a1d310e50725d3a7fa6a7bacc65a3cc89/0'))
                 .to.equal(false);
 
-            expect(util.isValidExecutionId('abcf627a1d310e50725d3a7fa6a7bacc65a3cc89/0001'))
+            expect(util.isValidExecutionId('abcf627a1d310e50725d3a7fa6a7bacc65a3cc89/1'))
+                .to.equal(false);
+
+            expect(util.isValidExecutionId('abcf627a1d310e50725d3a7fa6a7bacc65a3cc89/01'))
+                .to.equal(false);
+
+            expect(util.isValidExecutionId('abcf627a1d310e50725d3a7fa6a7bacc65a3cc89/001'))
                 .to.equal(false);
 
             expect(util.isValidExecutionId('abcf627a1d310e50725d3a7fa6a7bacc65a3cc89/10000'))

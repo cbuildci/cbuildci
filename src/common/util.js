@@ -82,31 +82,43 @@ exports.isValidRepoId = function isValidRepoId(id) {
 };
 
 /**
+ * Build an execution ID from parts.
+ *
+ * @param {string} commit
+ * @param {number|string} executionNum
+ * @returns {string}
+ */
+exports.buildExecutionId = function buildExecutionId(commit, executionNum) {
+    return `${commit}/${String(executionNum).padStart(4, '0')}`.toLowerCase();
+};
+
+/**
  * Split an execution ID into its parts, or null if it is invalid.
  *
  * @param {string} id
- * @returns {{ sha: string, executionId: string }|null}
+ * @returns {{ commit: string, executionNum: string }|null}
  */
 exports.parseExecutionId = function parseExecutionId(id) {
     if (typeof id !== 'string') {
         return null;
     }
 
-    const [sha, executionId, ...extra] = id.toLowerCase().split('/');
+    const [commit, executionNum, ...extra] = id.toLowerCase().split('/');
 
     if (extra.length) {
         return null;
     }
 
-    if (!exports.isValidSha(sha)
-        || typeof executionId !== 'string'
-        || !executionId.match(/^[1-9][0-9]{0,3}$/)) {
+    if (!exports.isValidSha(commit)
+        || typeof executionNum !== 'string'
+        || executionNum === '0000'
+        || !executionNum.match(/^[0-9]{4}$/)) {
         return null;
     }
 
     return {
-        sha,
-        executionId,
+        commit,
+        executionNum: parseInt(executionNum),
     };
 };
 
@@ -114,14 +126,14 @@ exports.parseExecutionId = function parseExecutionId(id) {
  * Split an execution ID into its parts, or null if it is invalid.
  *
  * @param {string} id
- * @returns {{ owner: string, repo: string, sha: string, executionId: string }|null}
+ * @returns {{ owner: string, repo: string, commit: string, executionNum: number }|null}
  */
 exports.parseLongExecutionId = function parseLongExecutionId(id) {
     if (typeof id !== 'string') {
         return null;
     }
 
-    const [owner, repo, sha, executionId, ...extra] = id.toLowerCase().split('/');
+    const [owner, repo, commit, executionNum, ...extra] = id.toLowerCase().split('/');
 
     if (extra.length) {
         return null;
@@ -129,17 +141,18 @@ exports.parseLongExecutionId = function parseLongExecutionId(id) {
 
     if (!exports.isValidGitHubUser(owner)
         || !exports.isValidGitHubRepo(repo)
-        || !exports.isValidSha(sha)
-        || typeof executionId !== 'string'
-        || !executionId.match(/^[1-9][0-9]{0,3}$/)) {
+        || !exports.isValidSha(commit)
+        || typeof executionNum !== 'string'
+        || executionNum === '0000'
+        || !executionNum.match(/^[0-9]{4}$/)) {
         return null;
     }
 
     return {
         owner,
         repo,
-        sha,
-        executionId,
+        commit,
+        executionNum: parseInt(executionNum),
     };
 };
 
