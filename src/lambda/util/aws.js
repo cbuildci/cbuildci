@@ -1,6 +1,7 @@
 'use strict';
 
 const AWS = require('aws-sdk');
+const util = require('../../common/util');
 
 const AWS_REGION = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || 'us-east-1';
 
@@ -369,7 +370,7 @@ exports.releaseLock = async function releaseLock(
 exports.getNextExecutionId = async function getNextExecutionId(
     tableName,
     repoId,
-    commitSHA,
+    commit,
     serviceParams = {},
 ) {
     const records = await exports.queryTableItem(
@@ -381,7 +382,7 @@ exports.getNextExecutionId = async function getNextExecutionId(
         },
         {
             ':id': repoId,
-            ':cs': `${commitSHA}/`,
+            ':cs': `${commit}/`,
         },
         {
             limit: 1,
@@ -390,9 +391,12 @@ exports.getNextExecutionId = async function getNextExecutionId(
         serviceParams,
     );
 
-    return records.items.length
-        ? `${commitSHA}/${parseInt(records.items[0].executionId.split('/')[1]) + 1}`
-        : `${commitSHA}/1`;
+    return util.buildExecutionId(
+        commit,
+        records.items.length
+            ? 1 + util.parseExecutionId(records.items[0].executionId).executionNum
+            : 1
+    );
 };
 
 exports.getExecution = async function getExecution(tableName, repoId, executionId, serviceParams = {}) {
@@ -446,8 +450,11 @@ exports.updateExecution = async function updateExecution(
     tableName,
     repoId,
     executionId,
-    meta = null,
-    state = null,
+    {
+        conclusion = null,
+        meta = null,
+        state = null,
+    } = {},
     serviceParams = {},
 ) {
     let UpdateExpression = 'SET #ut = :time';
@@ -458,6 +465,14 @@ exports.updateExecution = async function updateExecution(
         ':time': Date.now(),
     };
 
+    if (conclusion) {
+        UpdateExpression += ', #c = :c, #ct = :ct';
+        ExpressionAttributeNames['#c'] = 'conclusion';
+        ExpressionAttributeValues[':c'] = conclusion;
+        ExpressionAttributeNames['#ct'] = 'conclusionTime';
+        ExpressionAttributeValues[':ct'] = Date.now();
+    }
+
     if (state) {
         UpdateExpression += ', #s = :s';
         ExpressionAttributeNames['#s'] = 'state';
@@ -467,9 +482,9 @@ exports.updateExecution = async function updateExecution(
     if (meta) {
         const keys = Object.keys(meta);
         for (let i = 0; i < keys.length; i++) {
-            UpdateExpression += `, meta.#n${i} = :v${i}`;
-            ExpressionAttributeNames[`#n${i}`] = keys[i];
-            ExpressionAttributeValues[`:v${i}`] = meta[keys[i]];
+            UpdateExpression += `, meta.#mn${i} = :mv${i}`;
+            ExpressionAttributeNames[`#mn${i}`] = keys[i];
+            ExpressionAttributeValues[`:mv${i}`] = meta[keys[i]];
         }
     }
 

@@ -290,6 +290,7 @@ exports.startExecution = async function startExecution(
 
     if (isForGitHubApp && ctx.ciApp.githubUseChecks) {
         ctx.logInfo(`Creating check run "${state.checksName}"...`);
+        const { commit, executionNum } = util.parseExecutionId(state.executionId);
         const response = await github.createCheckRun(
             ctx.ciApp.githubApiUrl,
             token,
@@ -298,7 +299,7 @@ exports.startExecution = async function startExecution(
             state.checksName,
             commitSHA,
             {
-                details_url: `${ctx.ciApp.baseUrl}/app/repo/${state.repoId}/execution/${state.executionId}`,
+                details_url: `${ctx.ciApp.baseUrl}/app/repo/${state.repoId}/commit/${commit}/exec/${executionNum}`,
                 external_id: `${state.repoId}/${state.executionId}`,
                 status: 'queued',
                 started_at: Date.now(),
@@ -332,7 +333,9 @@ exports.startExecution = async function startExecution(
         state.repoId,
         state.executionId,
         {
-            executionArn: execResult.executionArn,
+            meta: {
+                executionArn: execResult.executionArn,
+            },
         },
     );
 

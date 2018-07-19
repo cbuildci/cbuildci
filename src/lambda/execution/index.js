@@ -103,9 +103,8 @@ async function executionHandler(state, ciApp, traceId) {
                 conclusion: state.runTask === 'RunError'
                     ? 'ERROR'
                     : 'COMPLETE',
-                conclusionTime: Date.now(),
+                state,
             },
-            state,
         );
 
         if (state.checksRunId) {
@@ -342,8 +341,9 @@ async function executionHandler(state, ciApp, traceId) {
         ciApp.tableExecutionsName,
         state.repoId,
         state.executionId,
-        null,
-        state,
+        {
+            state,
+        },
     );
 
     // Stop builds if the API has requested this execution to stop.
@@ -568,7 +568,8 @@ async function executionHandler(state, ciApp, traceId) {
             description = 'Timed Out';
         }
 
-        const targetUrl = `${ciApp.baseUrl}/api/v1/repo/${state.repoId}/execution/${state.executionId}/build/${buildState.buildKey}`;
+        const { commit, executionNum } = util.parseExecutionId(state.executionId);
+        const targetUrl = `${ciApp.baseUrl}/api/v1/repo/${state.repoId}/commit/${commit}/exec/${executionNum}/build/${buildState.buildKey}`;
 
         await github.pushCommitStatus(
             ciApp.githubApiUrl,
@@ -591,9 +592,21 @@ function getExecutionSummary(state) {
     ]
         .concat(
             Object.values(state.builds)
+                .sort((buildA, buildB) => {
+                    if (buildA.buildKey < buildB.buildKey) {
+                        return -1;
+                    }
+                    else if (buildA.buildKey > buildB.buildKey) {
+                        return 1;
+                    }
+                    else {
+                        return 0;
+                    }
+                })
                 .map(({ buildKey, status, codeBuild }) => {
                     const icon = statusToEmoji[status] || '';
-                    const link = `${ciApp.baseUrl}/api/v1/repo/${state.repoId}/execution/${state.executionId}/build/${buildKey}`;
+                    const { commit, executionNum } = util.parseExecutionId(state.executionId);
+                    const link = `${ciApp.baseUrl}/api/v1/repo/${state.repoId}/commit/${commit}/exec/${executionNum}/build/${buildKey}`;
                     const currentPhase = codeBuild && codeBuild.currentPhase;
                     const duration = codeBuild && codeBuild.startTime && codeBuild.endTime
                         ? `${Math.round((new Date(codeBuild.endTime).getTime() - new Date(codeBuild.startTime).getTime()) / 1000)}s`

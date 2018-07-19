@@ -7,28 +7,33 @@ const github = require('../../util/github');
 
 async function getExecution(token, ctx) {
     const repoId = util.buildRepoId(
-        ctx.params.repoOwner,
-        ctx.params.repoName,
+        ctx.params.owner,
+        ctx.params.repo,
+    );
+
+    const executionId = util.buildExecutionId(
+        ctx.params.commit,
+        ctx.params.executionNum,
     );
 
     const execution = await aws.getExecution(
         ctx.ciApp.tableExecutionsName,
         repoId,
-        ctx.params.executionId,
+        executionId,
     );
 
     // TODO: Verify owner and repo ID.
 
     if (!execution) {
-        ctx.logWarn(`Execution "${ctx.params.executionId}" not found for repo "${repoId}" for user "${ctx.session.githubUser.login}" (${ctx.session.githubUser.id})`);
+        ctx.logWarn(`Execution "${executionId}" not found for repo "${repoId}" for user "${ctx.session.githubUser.login}" (${ctx.session.githubUser.id})`);
         ctx.throw(404, 'Repository or execution not found');
     }
 
     const repositoryResponse = await github.getRepository(
         ctx.ciApp.githubApiUrl,
         token,
-        ctx.params.repoOwner,
-        ctx.params.repoName,
+        ctx.params.owner,
+        ctx.params.repo,
     );
 
     if (repositoryResponse.statusCode !== 200) {
@@ -45,9 +50,9 @@ async function getExecution(token, ctx) {
 }
 
 module.exports = koaRouter({
-    prefix: '/:repoOwner/:repoName',
+    prefix: '/:owner/:repo',
 })
-    .get('/execution/:executionId', async (ctx) => {
+    .get('/commit/:commit/exec/:executionNum', async (ctx) => {
         const token = (
             await aws.decryptString(ctx.session.encryptedGithubAuthToken)
         ).toString('utf8');
@@ -55,17 +60,15 @@ module.exports = koaRouter({
         const execution = await getExecution(token, ctx);
 
         ctx.body = {
+            ...util.parseRepoId(execution.repoId),
+            ...util.parseExecutionId(execution.executionId),
             repoId: execution.repoId,
             executionId: execution.executionId,
             createTime: execution.createTime,
             updateTime: execution.updateTime,
-            meta: execution.meta && {
-                conclusion: execution.meta.conclusion,
-                conclusionTime: execution.meta.conclusionTime,
-                stop: execution.meta.stop,
-                githubOwnerId: execution.meta.githubOwnerId,
-                githubRepoId: execution.meta.githubRepoId,
-            },
+            conclusion: execution.conclusion,
+            conclusionTime: execution.conclusionTime,
+            meta: execution.meta,
             state: execution.state && {
                 isRunning: execution.state.isRunning,
                 errorInfo: execution.state.errorInfo,
@@ -75,7 +78,7 @@ module.exports = koaRouter({
         };
     })
 
-    .get('/execution/:executionId/stop', async (ctx) => {
+    .get('/commit/:commit/exec/:executionNum/stop', async (ctx) => {
         const token = (
             await aws.decryptString(ctx.session.encryptedGithubAuthToken)
         ).toString('utf8');
@@ -95,9 +98,11 @@ module.exports = koaRouter({
             execution.repoId,
             execution.executionId,
             {
-                stop: {
-                    user: ctx.session.githubUser.login,
-                    requestTime: Date.now(),
+                meta: {
+                    stop: {
+                        user: ctx.session.githubUser.login,
+                        requestTime: Date.now(),
+                    },
                 },
             },
         );
@@ -107,7 +112,7 @@ module.exports = koaRouter({
         };
     })
 
-    .get('/execution/:executionId/build/:buildKey', async (ctx) => {
+    .get('/commit/:commit/exec/:executionNum/build/:buildKey', async (ctx) => {
         const token = (
             await aws.decryptString(ctx.session.encryptedGithubAuthToken)
         ).toString('utf8');
@@ -161,7 +166,7 @@ module.exports = koaRouter({
         };
     })
 
-    .get('/execution/:executionId/build/:buildKey/logs', async (ctx) => {
+    .get('/commit/:commit/exec/:executionNum/build/:buildKey/logs', async (ctx) => {
         const token = (
             await aws.decryptString(ctx.session.encryptedGithubAuthToken)
         ).toString('utf8');

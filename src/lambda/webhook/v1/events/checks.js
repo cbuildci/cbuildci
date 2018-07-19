@@ -18,12 +18,12 @@ module.exports = async function handleCheckEvent(ctx, gitHubEventType, ghEvent, 
     validateCheckEvent(ctx, gitHubEventType, ghEvent);
 
     if (gitHubEventType === 'check_run' && ghEvent.action === 'requested_action' && ghEvent.requested_action.identifier === 'stop') {
-        const { owner, repo, sha, executionId } = util.parseLongExecutionId(ghEvent.check_run.external_id);
+        const { owner, repo, commit, executionNum } = util.parseLongExecutionId(ghEvent.check_run.external_id);
 
         const execution = await aws.getExecution(
             ctx.ciApp.tableExecutionsName,
             util.buildRepoId(owner, repo),
-            `${sha}/${executionId}`,
+            util.buildExecutionId(commit, executionNum),
         );
 
         if (!execution.state || !execution.state.isRunning || execution.state.errorInfo) {
@@ -39,9 +39,11 @@ module.exports = async function handleCheckEvent(ctx, gitHubEventType, ghEvent, 
             execution.repoId,
             execution.executionId,
             {
-                stop: {
-                    user: ghEvent.sender.login,
-                    requestTime: Date.now(),
+                meta: {
+                    stop: {
+                        user: ghEvent.sender.login,
+                        requestTime: Date.now(),
+                    },
                 },
             },
         );
