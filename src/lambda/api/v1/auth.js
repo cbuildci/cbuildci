@@ -127,6 +127,10 @@ module.exports = koaRouter()
                     two_factor_authentication: userResponse.data.two_factor_authentication,
                 };
 
+                // Store an internal ID hash that is used within in encrypted client-side stored data.
+                ctx.session.internalIdentifier = crypto.randomBytes(32).toString('hex');
+
+                // Store the encrypted GitHub OAuth token in the session.
                 ctx.session.encryptedGithubAuthToken = await aws.encryptString(
                     ctx.ciApp.secretsKMSArn,
                     tokenResponse.data.access_token,

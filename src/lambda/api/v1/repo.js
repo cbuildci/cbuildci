@@ -22,31 +22,42 @@ async function getExecution(token, ctx) {
         executionId,
     );
 
-    // TODO: Verify owner and repo ID.
-
     if (!execution) {
         ctx.logWarn(`Execution "${executionId}" not found for repo "${repoId}" for user "${ctx.session.githubUser.login}" (${ctx.session.githubUser.id})`);
         ctx.throw(404, 'Repository or execution not found');
     }
 
+    return execution;
+}
+
+async function verifyRepoAccess(token, ctx, execution = null) {
+    const { owner, repo } = ctx.params;
+
     const repositoryResponse = await github.getRepository(
         ctx.ciApp.githubApiUrl,
         token,
-        ctx.params.owner,
-        ctx.params.repo,
+        owner,
+        repo,
     );
 
     if (repositoryResponse.statusCode !== 200) {
-        ctx.logWarn(`Repository ${repoId} not found for user "${ctx.session.githubUser.login}" (${ctx.session.githubUser.id})`);
+        ctx.logWarn(`Repository ${util.buildRepoId(owner, repo)} not found for user "${ctx.session.githubUser.login}" (${ctx.session.githubUser.id})`);
         ctx.throw(404, 'Repository or execution not found');
+    }
+
+    if (execution) {
+        // Verify the repo id matches the one in the execution,
+        // just in case a user/repo was deleted and then recreated.
+        if (repositoryResponse.data.id !== execution.meta.githubRepo.id) {
+            ctx.logWarn(`Repository ${util.buildRepoId(owner, repo)} mismatched id in execution: ${repositoryResponse.data.id} !== ${execution.meta.githubRepo.id}`);
+            ctx.throw(500, 'The internal ID for the repository does not match (was the repo deleted and recreated?)');
+        }
     }
 
     if (!repositoryResponse.data.permissions.push) {
         ctx.logWarn(`User "${ctx.session.githubUser.login}" (${ctx.session.githubUser.id}) does not have write access to repo ${repoId}`);
         ctx.throw(404, 'Repository or execution not found');
     }
-
-    return execution;
 }
 
 module.exports = koaRouter({
@@ -59,9 +70,53 @@ module.exports = koaRouter({
 
         const execution = await getExecution(token, ctx);
 
+        let executionAccessKey = ctx.headers['x-execution-access-key'];
+
+        // Verify the encrypted access key, if provided.
+        if (executionAccessKey) {
+            try {
+                // Decrypt and parse the access key.
+                const {
+                    sessionInternalIdentifier,
+                    expirationTime,
+                    accessTo,
+                } = JSON.parse((await aws.decryptString(executionAccessKey)).toString('utf8'));
+
+                // Reset the access key if isn't valid or has expired.
+                if (sessionInternalIdentifier !== ctx.session.internalIdentifier
+                    || expirationTime < Date.now()
+                    || accessTo !== ctx.url) {
+                    executionAccessKey = null;
+                }
+            }
+            catch (err) {
+                executionAccessKey = null;
+                ctx.logError(`Invalid execution access key for user "${ctx.session.githubUser.login}" (${ctx.session.githubUser.id}): [${err.name}] ${err.message}`);
+            }
+        }
+
+        // Create a temporary access key, if one was not provided and the execution has not completed.
+        // This allows us to reduce the number of requests to GitHub when the UI is continually fetching execution data.
+        if (!executionAccessKey && execution.status !== 'COMPLETED') {
+            await verifyRepoAccess(token, ctx, execution);
+            executionAccessKey = await aws.encryptString(
+                ctx.ciApp.secretsKMSArn,
+                JSON.stringify({
+                    sessionInternalIdentifier: ctx.session.internalIdentifier,
+                    expirationTime: Date.now() + 300000, // 5 minutes
+                    accessTo: ctx.url,
+                }),
+            );
+        }
+
         ctx.body = {
+            // Destruct the IDs into their parts.
             ...util.parseRepoId(execution.repoId),
             ...util.parseExecutionId(execution.executionId),
+
+            // Include the access key, if it was set.
+            executionAccessKey,
+
             repoId: execution.repoId,
             executionId: execution.executionId,
             createTime: execution.createTime,
