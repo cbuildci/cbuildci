@@ -61,6 +61,16 @@ class CIApp {
     }
 
     /**
+     * Log message at log level DEBUG.
+     *
+     * @param {string} msg
+     */
+    logDebug(msg) {
+        // eslint-disable-next-line no-console
+        console.log(msg);
+    }
+
+    /**
      * Log message at log level INFO.
      *
      * @param {string} msg
@@ -95,6 +105,7 @@ class CIApp {
         koaApp.context.logInfo = this.logInfo.bind(this);
         koaApp.context.logWarn = this.logWarn.bind(this);
         koaApp.context.logTrace = this.logTrace.bind(this);
+        koaApp.context.logDebug = this.logDebug.bind(this);
         koaApp.context.logError = this.logError.bind(this);
 
         koaApp.on('error', (err) => {
