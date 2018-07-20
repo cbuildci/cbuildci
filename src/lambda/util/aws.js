@@ -433,6 +433,7 @@ exports.createExecution = async function createExecution(
         Item: {
             repoId,
             executionId,
+            status: 'QUEUED',
             createTime: Date.now(),
             updateTime: Date.now(),
             conclusion: null,
@@ -451,40 +452,47 @@ exports.updateExecution = async function updateExecution(
     repoId,
     executionId,
     {
+        status = null,
         conclusion = null,
         meta = null,
         state = null,
     } = {},
     serviceParams = {},
 ) {
-    let UpdateExpression = 'SET #ut = :time';
+    let UpdateExpression = 'SET #updateTime = :updateTime';
     const ExpressionAttributeNames = {
-        '#ut': 'updateTime',
+        '#updateTime': 'updateTime',
     };
     const ExpressionAttributeValues = {
-        ':time': Date.now(),
+        ':updateTime': Date.now(),
     };
 
+    if (status) {
+        UpdateExpression += ', #status = :status';
+        ExpressionAttributeNames['#status'] = 'status';
+        ExpressionAttributeValues[':status'] = status;
+    }
+
     if (conclusion) {
-        UpdateExpression += ', #c = :c, #ct = :ct';
-        ExpressionAttributeNames['#c'] = 'conclusion';
-        ExpressionAttributeValues[':c'] = conclusion;
-        ExpressionAttributeNames['#ct'] = 'conclusionTime';
-        ExpressionAttributeValues[':ct'] = Date.now();
+        UpdateExpression += ', #conclusion = :conclusion, #conclusionTime = :conclusionTime';
+        ExpressionAttributeNames['#conclusion'] = 'conclusion';
+        ExpressionAttributeValues[':conclusion'] = conclusion;
+        ExpressionAttributeNames['#conclusionTime'] = 'conclusionTime';
+        ExpressionAttributeValues[':conclusionTime'] = Date.now();
     }
 
     if (state) {
-        UpdateExpression += ', #s = :s';
-        ExpressionAttributeNames['#s'] = 'state';
-        ExpressionAttributeValues[':s'] = state;
+        UpdateExpression += ', #state = :state';
+        ExpressionAttributeNames['#state'] = 'state';
+        ExpressionAttributeValues[':state'] = state;
     }
 
     if (meta) {
         const keys = Object.keys(meta);
         for (let i = 0; i < keys.length; i++) {
-            UpdateExpression += `, meta.#mn${i} = :mv${i}`;
-            ExpressionAttributeNames[`#mn${i}`] = keys[i];
-            ExpressionAttributeValues[`:mv${i}`] = meta[keys[i]];
+            UpdateExpression += `, meta.#meta${i} = :meta${i}`;
+            ExpressionAttributeNames[`#meta${i}`] = keys[i];
+            ExpressionAttributeValues[`:meta${i}`] = meta[keys[i]];
         }
     }
 

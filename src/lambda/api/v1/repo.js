@@ -119,6 +119,7 @@ module.exports = koaRouter({
 
             repoId: execution.repoId,
             executionId: execution.executionId,
+            status: execution.status,
             createTime: execution.createTime,
             updateTime: execution.updateTime,
             conclusion: execution.conclusion,

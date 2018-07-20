@@ -306,7 +306,7 @@ exports.startExecution = async function startExecution(
                 actions: [
                     {
                         label: 'Stop',
-                        description: `Will stop build within ${state.waitSeconds} seconds.`,
+                        description: 'Stop the builds.',
                         identifier: 'stop',
                     },
                 ],
@@ -333,6 +333,7 @@ exports.startExecution = async function startExecution(
         state.repoId,
         state.executionId,
         {
+            status: 'IN_PROGRESS',
             meta: {
                 executionArn: execResult.executionArn,
             },

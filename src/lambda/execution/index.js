@@ -87,35 +87,23 @@ async function executionHandler(state, ciApp, traceId) {
     }
 
     if (state.runTask === 'RunError' || state.runTask === 'RunEnd') {
+        let title;
+        let conclusion;
+        let checkRunConclusion;
+
         if (state.runTask === 'RunError') {
             ciApp.logError(`Execution error: \n${JSON.stringify(state.errorInfo, null, 2)}`);
+            title = 'Internal System Error';
+            conclusion = 'ERROR';
+            checkRunConclusion = 'failure';
         }
         else if (state.runTask === 'RunEnd') {
             ciApp.logInfo('Execution completed');
-        }
-
-        ciApp.logInfo('Updating execution table item...');
-        await aws.updateExecution(
-            ciApp.tableExecutionsName,
-            state.repoId,
-            state.executionId,
-            {
-                conclusion: state.runTask === 'RunError'
-                    ? 'ERROR'
-                    : 'COMPLETE',
-                state,
-            },
-        );
-
-        if (state.checksRunId) {
-            installationAccessToken = installationAccessToken || await getToken(state);
-
-            let conclusion;
-            let title;
 
             if (state.stopRequested) {
-                conclusion = 'cancelled';
                 title = 'Stopped by User';
+                conclusion = 'STOPPED';
+                checkRunConclusion = 'cancelled';
             }
             else {
                 let failure = 0;
@@ -135,18 +123,37 @@ async function executionHandler(state, ciApp, traceId) {
                 }
 
                 if (failure) {
-                    conclusion = 'failure';
+                    conclusion = 'FAILED';
+                    checkRunConclusion = 'failure';
                     title = `${failure} build${failure === 1 ? '' : 's'} failed`;
                 }
                 else if (success) {
-                    conclusion = 'success';
+                    conclusion = 'SUCCEEDED';
+                    checkRunConclusion = 'success';
                     title = `${success} build${success === 1 ? '' : 's'} succeeded`;
                 }
                 else {
-                    conclusion = 'neutral';
+                    conclusion = 'NEUTRAL';
+                    checkRunConclusion = 'neutral';
                     title = `${neutral} build${neutral === 1 ? '' : 's'} skipped`;
                 }
             }
+        }
+
+        ciApp.logInfo('Updating execution table item...');
+        await aws.updateExecution(
+            ciApp.tableExecutionsName,
+            state.repoId,
+            state.executionId,
+            {
+                status: 'COMPLETED',
+                conclusion,
+                state,
+            },
+        );
+
+        if (state.checksRunId) {
+            installationAccessToken = installationAccessToken || await getToken(state);
 
             ciApp.logInfo(`Updating check run "${state.checksName}"...`);
             const response = await github.updateCheckRun(
@@ -158,7 +165,7 @@ async function executionHandler(state, ciApp, traceId) {
                 state.checksName,
                 {
                     status: 'completed',
-                    conclusion,
+                    conclusion: checkRunConclusion,
                     completed_at: Date.now(),
                     output: {
                         title,
@@ -376,7 +383,7 @@ async function executionHandler(state, ciApp, traceId) {
         if (!state.stopRequested) {
             actions.push({
                 label: 'Stop',
-                description: `Will stop build within ${state.waitSeconds} seconds.`,
+                description: 'Stop the builds.',
                 identifier: 'stop',
             });
         }
