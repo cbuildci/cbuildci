@@ -27,10 +27,12 @@ module.exports = async function handleCheckEvent(ctx, gitHubEventType, ghEvent, 
         );
 
         if (!execution.state || !execution.state.isRunning || execution.state.errorInfo) {
+            ctx.logInfo('Aborting as execution is not running');
             ctx.throw(400, 'Execution is not running');
         }
 
         if (execution.meta.stop) {
+            ctx.logInfo('Aborting as already stopping');
             ctx.throw(400, 'Execution is already stopping');
         }
 

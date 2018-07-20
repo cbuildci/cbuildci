@@ -252,6 +252,7 @@ exports.startExecution = async function startExecution(
     }
     catch (err) {
         if (err.code === 'ConditionalCheckFailedException') {
+            ctx.logInfo(`Lock already exists for "${lockId}"`);
             ctx.throw(400, `Failed since a lock already exists that has been last updated within ${ctx.ciApp.lockTimeoutSeconds} seconds`);
         }
         else {
