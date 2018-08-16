@@ -4,7 +4,8 @@ from troposphere import Template, Parameter, Ref
 from troposphere.dynamodb import \
     Table, KeySchema, \
     AttributeDefinition, ProvisionedThroughput, \
-    TimeToLiveSpecification
+    TimeToLiveSpecification, GlobalSecondaryIndex, \
+    Projection
 
 
 def create_template():
@@ -53,7 +54,7 @@ def create_template():
     p_locks_table_wcu = t.add_parameter(Parameter(
         "LocksTableWCU",
         Type = "Number",
-        Default = "1",
+        Default = "2",
     ))
 
     p_sessions_table_rcu = t.add_parameter(Parameter(
@@ -65,17 +66,29 @@ def create_template():
     p_sessions_table_wcu = t.add_parameter(Parameter(
         "SessionsTableWCU",
         Type = "Number",
-        Default = "1",
+        Default = "2",
     ))
 
     p_executions_table_rcu = t.add_parameter(Parameter(
         "ExecutionsTableRCU",
         Type = "Number",
-        Default = "5",
+        Default = "15",
     ))
 
     p_executions_table_wcu = t.add_parameter(Parameter(
         "ExecutionsTableWCU",
+        Type = "Number",
+        Default = "5",
+    ))
+
+    p_executions_search_indexes_rcu = t.add_parameter(Parameter(
+        "ExecutionsSearchIndexesRCU",
+        Type = "Number",
+        Default = "5",
+    ))
+
+    p_executions_search_indexes_wcu = t.add_parameter(Parameter(
+        "ExecutionsSearchIndexesWCU",
         Type = "Number",
         Default = "1",
     ))
@@ -179,12 +192,77 @@ def create_template():
                 AttributeName = "executionId",
                 AttributeType = "S",
             ),
+            AttributeDefinition(
+                AttributeName = "createTime",
+                AttributeType = "S",
+            ),
         ],
         ProvisionedThroughput = ProvisionedThroughput(
             ReadCapacityUnits = Ref(p_executions_table_rcu),
             WriteCapacityUnits = Ref(p_executions_table_wcu)
         ),
         Tags = tags,
+        GlobalSecondaryIndexes = [
+            GlobalSecondaryIndex(
+                IndexName = "search-repoId-createTime-index",
+                KeySchema = [
+                    KeySchema(
+                        KeyType = "HASH",
+                        AttributeName = "repoId",
+                    ),
+                    KeySchema(
+                        KeyType = "RANGE",
+                        AttributeName = "createTime",
+                    ),
+                ],
+                Projection = Projection(
+                    NonKeyAttributes = [
+                        "repoId",
+                        "executionId",
+                        "createTime",
+                        "updateTime",
+                        "status",
+                        "conclusion",
+                        "conclusionTime",
+                        "meta",
+                    ],
+                    ProjectionType = "INCLUDE",
+                ),
+                ProvisionedThroughput = ProvisionedThroughput(
+                    ReadCapacityUnits = Ref(p_executions_search_indexes_rcu),
+                    WriteCapacityUnits = Ref(p_executions_search_indexes_wcu),
+                ),
+            ),
+            GlobalSecondaryIndex(
+                IndexName = "search-repoId-executionId-index",
+                KeySchema = [
+                    KeySchema(
+                        KeyType = "HASH",
+                        AttributeName = "repoId",
+                    ),
+                    KeySchema(
+                        KeyType = "RANGE",
+                        AttributeName = "executionId",
+                    ),
+                ],
+                Projection = Projection(
+                    NonKeyAttributes = [
+                        "repoId",
+                        "executionId",
+                        "createTime",
+                        "updateTime",
+                        "status",
+                        "conclusion",
+                        "conclusionTime",
+                    ],
+                    ProjectionType = "INCLUDE",
+                ),
+                ProvisionedThroughput = ProvisionedThroughput(
+                    ReadCapacityUnits = Ref(p_executions_search_indexes_rcu),
+                    WriteCapacityUnits = Ref(p_executions_search_indexes_wcu),
+                ),
+            ),
+        ],
     ))
 
     return t

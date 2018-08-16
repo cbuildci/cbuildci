@@ -111,17 +111,23 @@ Parameters:
     Default: '5'
   LocksTableWCU:
     Type: Number
-    Default: '1'
+    Default: '2'
   SessionsTableRCU:
     Type: Number
     Default: '5'
   SessionsTableWCU:
     Type: Number
-    Default: '1'
+    Default: '2'
   ExecutionsTableRCU:
     Type: Number
-    Default: '5'
+    Default: '15'
   ExecutionsTableWCU:
+    Type: Number
+    Default: '5'
+  ExecutionsSearchIndexesRCU:
+    Type: Number
+    Default: '5'
+  ExecutionsSearchIndexesWCU:
     Type: Number
     Default: '1'
   Tag1Name:
@@ -402,6 +408,8 @@ Resources:
           AttributeType: S
         - AttributeName: executionId
           AttributeType: S
+        - AttributeName: createTime
+          AttributeType: S
       ProvisionedThroughput:
         ReadCapacityUnits: !Ref 'ExecutionsTableRCU'
         WriteCapacityUnits: !Ref 'ExecutionsTableWCU'
@@ -458,5 +466,45 @@ Resources:
               Value: !Ref 'Tag10Value'
             - !Ref 'AWS::NoValue'
         - !Ref 'AWS::NoValue'
+      GlobalSecondaryIndexes:
+        - IndexName: search-repoId-createTime-index
+          KeySchema:
+            - KeyType: HASH
+              AttributeName: repoId
+            - KeyType: RANGE
+              AttributeName: createTime
+          Projection:
+            NonKeyAttributes:
+              - repoId
+              - executionId
+              - createTime
+              - updateTime
+              - status
+              - conclusion
+              - conclusionTime
+              - meta
+            ProjectionType: INCLUDE
+          ProvisionedThroughput:
+            ReadCapacityUnits: !Ref 'ExecutionsSearchIndexesRCU'
+            WriteCapacityUnits: !Ref 'ExecutionsSearchIndexesWCU'
+        - IndexName: search-repoId-executionId-index
+          KeySchema:
+            - KeyType: HASH
+              AttributeName: repoId
+            - KeyType: RANGE
+              AttributeName: executionId
+          Projection:
+            NonKeyAttributes:
+              - repoId
+              - executionId
+              - createTime
+              - updateTime
+              - status
+              - conclusion
+              - conclusionTime
+            ProjectionType: INCLUDE
+          ProvisionedThroughput:
+            ReadCapacityUnits: !Ref 'ExecutionsSearchIndexesRCU'
+            WriteCapacityUnits: !Ref 'ExecutionsSearchIndexesWCU'
     Type: AWS::DynamoDB::Table
     DeletionPolicy: Retain
