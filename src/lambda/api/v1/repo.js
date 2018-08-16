@@ -179,7 +179,7 @@ module.exports = koaRouter({
                 meta: {
                     stop: {
                         user: ctx.session.githubUser.login,
-                        requestTime: Date.now(),
+                        requestTime: new Date().toISOString(),
                     },
                 },
             },
