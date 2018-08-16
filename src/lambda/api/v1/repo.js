@@ -221,13 +221,13 @@ module.exports = koaRouter({
         }
 
         const logResponse = await aws.getLogEvents(
-            build.logs.groupName,
-            build.logs.streamName,
+            build.codeBuild.logs.groupName,
+            build.codeBuild.logs.streamName,
             {
                 nextToken: typeof ctx.query.nextToken === 'string'
                     ? ctx.query.nextToken
                     : undefined,
-                limit: typeof ctx.query.limit === 'string'
+                limit: typeof ctx.query.limit === 'string' && ctx.query.limit.match(/^\d+$/)
                     ? Math.max(10, Math.min(100, parseInt(ctx.query.limit || 0) || 50))
                     : 50,
             },
