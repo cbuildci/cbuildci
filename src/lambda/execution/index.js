@@ -283,7 +283,7 @@ async function executionHandler(state, ciApp, traceId) {
         if (!buildState.status || buildState.status === STATUS_WAITING_FOR_DEPENDENCY) {
             let canRun = true;
             let failedDeps = false;
-            const waitingForDeps = [];
+            buildState.waitingForDeps = [];
 
             // Check any dependencies of the build.
             for (const depBuildKey of buildState.buildParams.dependsOn) {
@@ -294,7 +294,7 @@ async function executionHandler(state, ciApp, traceId) {
                     || depBuildState.status === STATUS_IN_PROGRESS
                     || depBuildState.status === STATUS_WAITING_FOR_DEPENDENCY) {
                     canRun = false;
-                    waitingForDeps.push(depBuildKey);
+                    buildState.waitingForDeps.push(depBuildKey);
                 }
 
                 // Fail if dependency failed.
@@ -323,7 +323,7 @@ async function executionHandler(state, ciApp, traceId) {
                 }
             }
             else {
-                ciApp.logInfo(`Build "${buildKey}" waiting on deps: ${waitingForDeps.map((v) => JSON.stringify(v)).join(',')}`);
+                ciApp.logInfo(`Build "${buildKey}" waiting on deps: ${buildState.waitingForDeps.map((v) => JSON.stringify(v)).join(',')}`);
 
                 // Mark the build as waiting on deps and push its status.
                 if (!buildState.status) {

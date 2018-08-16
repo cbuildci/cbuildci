@@ -119,6 +119,7 @@ exports.startExecution = async function startExecution(
                 buildKey,
                 status: null,
                 codeBuild: null,
+                waitingForDeps: [],
                 buildParams: schema.validateBuildParams({
                     ...ctx.ciApp.globalBuildDefaults,
                     ...repoConfig.buildDefaults || {},
