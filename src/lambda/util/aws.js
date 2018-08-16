@@ -442,8 +442,8 @@ exports.createExecution = async function createExecution(
             repoId,
             executionId,
             status: 'QUEUED',
-            createTime: Date.now(),
-            updateTime: Date.now(),
+            createTime: new Date().toISOString(),
+            updateTime: new Date().toISOString(),
             conclusion: null,
             conclusionTime: null,
             meta,
@@ -472,7 +472,7 @@ exports.updateExecution = async function updateExecution(
         '#updateTime': 'updateTime',
     };
     const ExpressionAttributeValues = {
-        ':updateTime': Date.now(),
+        ':updateTime': new Date().toISOString(),
     };
 
     if (status) {
@@ -486,7 +486,7 @@ exports.updateExecution = async function updateExecution(
         ExpressionAttributeNames['#conclusion'] = 'conclusion';
         ExpressionAttributeValues[':conclusion'] = conclusion;
         ExpressionAttributeNames['#conclusionTime'] = 'conclusionTime';
-        ExpressionAttributeValues[':conclusionTime'] = Date.now();
+        ExpressionAttributeValues[':conclusionTime'] = new Date().toISOString();
     }
 
     if (state) {
