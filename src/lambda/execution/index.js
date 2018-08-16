@@ -616,7 +616,7 @@ function getExecutionSummary(state) {
                     const link = `${ciApp.baseUrl}/api/v1/repo/${state.repoId}/commit/${commit}/exec/${executionNum}/build/${buildKey}`;
                     const currentPhase = codeBuild && codeBuild.currentPhase;
                     const duration = codeBuild && codeBuild.startTime && codeBuild.endTime
-                        ? `${Math.round((new Date(codeBuild.endTime).getTime() - new Date(codeBuild.startTime).getTime()) / 1000)}s`
+                        ? `${Math.round((util.toEpochTime(codeBuild.endTime) - util.toEpochTime(codeBuild.startTime)) / 1000)}s`
                         : '-';
                     return `| [${buildKey}](${link}) | ${icon} ${statusToText[status] || status || '-'} | ${currentPhase || '-'} | ${duration} |`;
                 })
@@ -637,12 +637,25 @@ function getCodeBuildProps(build) {
     return {
         id: build.id,
         arn: build.arn,
-        startTime: build.startTime,
-        endTime: build.endTime,
+        startTime: util.toISODateString(build.startTime),
+        endTime: util.toISODateString(build.endTime),
         currentPhase: build.currentPhase,
         buildStatus: build.buildStatus,
         buildComplete: build.buildComplete,
         logs: build.logs,
+        phases: build.phases && build.phases.map((phase) => ({
+            phaseType: phase.phaseType,
+            phaseStatus: phase.phaseStatus,
+            startTime: util.toISODateString(phase.startTime),
+            endTime: util.toISODateString(phase.endTime),
+            durationInSeconds: phase.durationInSeconds,
+            contexts: phase.contexts && phase.contexts
+                .filter((context) => context.statusCode)
+                .map((context) => ({
+                    statusCode: context.statusCode,
+                    message: context.message,
+                })),
+        })),
     };
 }
 

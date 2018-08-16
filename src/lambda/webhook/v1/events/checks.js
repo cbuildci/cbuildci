@@ -44,7 +44,7 @@ module.exports = async function handleCheckEvent(ctx, gitHubEventType, ghEvent, 
                 meta: {
                     stop: {
                         user: ghEvent.sender.login,
-                        requestTime: Date.now(),
+                        requestTime: new Date().toISOString(),
                     },
                 },
             },

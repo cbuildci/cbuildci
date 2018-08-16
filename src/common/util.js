@@ -262,3 +262,25 @@ exports.cacheAsyncResult = function cacheAsyncResult(fn, { getKey = null, expira
         return value;
     };
 };
+
+exports.toEpochTime = function toEpochTime(dt) {
+    if (!dt && dt !== 0) {
+        return null;
+    }
+
+    dt = new Date(dt);
+
+    if (Number.isNaN(dt.getTime())) {
+        // TODO: Throw error on invalid date?
+        return null;
+    }
+
+    return dt.getTime();
+};
+
+exports.toISODateString = function toISODateString(dt) {
+    dt = exports.toEpochTime(dt);
+    return dt == null
+        ? dt
+        : dt.toISOString();
+};
