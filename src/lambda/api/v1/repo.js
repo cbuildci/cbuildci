@@ -116,6 +116,58 @@ async function verifyRepoAccessByKey(ctx, headerName, getGithubAuthToken, create
 module.exports = koaRouter({
     prefix: '/:owner/:repo',
 })
+    .get('/', async (ctx) => {
+        const token = (
+            await aws.decryptString(ctx.session.encryptedGithubAuthToken)
+        ).toString('utf8');
+
+        await verifyRepoAccess(token, ctx);
+
+        const { owner, repo } = ctx.params;
+
+        const results = await aws.getExecutionsForRepo(
+            ctx.ciApp.tableExecutionsName,
+            util.buildRepoId(owner, repo),
+            {
+                limit: typeof ctx.query.limit === 'string' && ctx.query.limit.match(/^\d+$/)
+                    ? Math.max(10, Math.min(100, parseInt(ctx.query.limit || 0) || 50))
+                    : 50,
+            }
+        );
+
+        ctx.body = {
+            executions: results.items.map((execution) => ({
+                ...util.parseRepoId(execution.repoId),
+                ...util.parseExecutionId(execution.executionId),
+                repoId: execution.repoId,
+                executionId: execution.executionId,
+                status: execution.status,
+                createTime: execution.createTime,
+                updateTime: execution.updateTime,
+                conclusion: execution.conclusion,
+                conclusionTime: execution.conclusionTime,
+                meta: execution.meta,
+            })),
+            lastEvaluatedKey: results.lastEvaluatedKey,
+        };
+    })
+
+    .get('/commit/:commit', async (ctx) => {
+        const token = (
+            await aws.decryptString(ctx.session.encryptedGithubAuthToken)
+        ).toString('utf8');
+
+        await verifyRepoAccess(token, ctx);
+
+        const { owner, repo, commit } = ctx.params;
+
+        ctx.body = await aws.getExecutionsForCommit(
+            ctx.ciApp.tableExecutionsName,
+            util.buildRepoId(owner, repo),
+            commit,
+        );
+    })
+
     .get('/commit/:commit/exec/:executionNum', async (ctx) => {
         const execution = await getExecution(ctx);
 
