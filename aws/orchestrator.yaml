@@ -1143,6 +1143,7 @@ Resources:
   RestApi:
     Properties:
       Name: !Sub '${AWS::StackName}-api'
+      MinimumCompressionSize: 2048
     Type: AWS::ApiGateway::RestApi
     DependsOn:
       - ApiLambda

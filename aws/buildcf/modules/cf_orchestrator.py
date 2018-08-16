@@ -1032,6 +1032,7 @@ def create_template():
             r_webhook_lambda,
         ],
         Name = Sub("${AWS::StackName}-api"),
+        MinimumCompressionSize = 2048,
         # Body = apigateway_swagger,
     ))
 
