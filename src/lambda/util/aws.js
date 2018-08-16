@@ -407,6 +407,55 @@ exports.getNextExecutionId = async function getNextExecutionId(
     );
 };
 
+exports.getExecutionsForCommit = async function getExecutionsForCommit(
+    tableName,
+    repoId,
+    commit,
+    serviceParams = {},
+) {
+    return await exports.queryTable(
+        tableName,
+        '#id = :id and begins_with(#cs, :cs)',
+        {
+            '#id': 'repoId',
+            '#cs': 'executionId',
+        },
+        {
+            ':id': repoId,
+            ':cs': `${commit}/`,
+        },
+        {
+            reverse: true,
+            indexName: 'search-repoId-executionId',
+        },
+        serviceParams,
+    );
+};
+
+exports.getExecutionsForRepo = async function getExecutionsForRepo(
+    tableName,
+    repoId,
+    { limit = 50, reverse = true },
+    serviceParams = {},
+) {
+    return await exports.queryTable(
+        tableName,
+        '#id = :id',
+        {
+            '#id': 'repoId',
+        },
+        {
+            ':id': repoId,
+        },
+        {
+            limit,
+            reverse,
+            indexName: 'search-repoId-createTime-index',
+        },
+        serviceParams,
+    );
+};
+
 exports.getExecution = async function getExecution(tableName, repoId, executionId, serviceParams = {}) {
     return exports.getTableItemByKey(
         tableName,
