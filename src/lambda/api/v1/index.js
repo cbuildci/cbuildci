@@ -19,5 +19,7 @@ module.exports = koaRouter()
         }
     })
 
+    .use('/user', require('./user').routes())
+
     // Routes that require a login session.
     .use('/repo', require('./repo').routes());
