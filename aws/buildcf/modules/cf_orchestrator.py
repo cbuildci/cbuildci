@@ -8,7 +8,7 @@ from troposphere import \
     Equals, Not, If, NoValue, Split
 from troposphere.iam import Role, Policy, PolicyType
 from troposphere.kms import Key, Alias
-from troposphere.awslambda import Function, Code, Permission, Environment
+from troposphere.awslambda import Function, Code, Permission, Environment, TracingConfig
 from troposphere.apigateway import \
     RestApi, Resource, \
     Method, MethodResponse, \
@@ -26,6 +26,7 @@ from awacs import \
     execute_api as ac_execute_api, \
     s3 as ac_s3, \
     ssm as ac_ssm, \
+    xray as ac_xray, \
     kms as ac_kms, \
     logs as ac_logs, \
     awslambda as ac_lambda
@@ -230,6 +231,14 @@ def create_template():
         Default = ".cbuildci.yml",
     ))
 
+    p_enable_xray = t.add_parameter(Parameter(
+        "EnableXRay",
+        Description = "Set to true to enable AWS X-Ray for the lambda functions",
+        Type = "String",
+        AllowedValues = ["true", "false"],
+        Default = "false",
+    ))
+
     t.add_condition(
         "DoCreateKMSKey",
         Equals(Ref(p_secrets_kms_arn), "-CREATE-"),
@@ -243,6 +252,11 @@ def create_template():
     t.add_condition(
         "HasKMSUserArns",
         Not(Equals(Ref(p_secrets_kms_user_arns), "-NONE-")),
+    )
+
+    t.add_condition(
+        "HasXRay",
+        Equals(Ref(p_enable_xray), "true"),
     )
 
     # Replace with custom tags if desired.
@@ -284,12 +298,22 @@ def create_template():
                                     account = vAWSAccountId,
                                 )),
                                 Sub(ac_dynamodb.ARN(
+                                    resource = "table/${%s}/index/*" % p_config_table_name.title,
+                                    region = vAWSRegion,
+                                    account = vAWSAccountId,
+                                )),
+                                Sub(ac_dynamodb.ARN(
                                     resource = "table/${%s}" % p_locks_table_name.title,
                                     region = vAWSRegion,
                                     account = vAWSAccountId,
                                 )),
                                 Sub(ac_dynamodb.ARN(
                                     resource = "table/${%s}" % p_executions_table_name.title,
+                                    region = vAWSRegion,
+                                    account = vAWSAccountId,
+                                )),
+                                Sub(ac_dynamodb.ARN(
+                                    resource = "table/${%s}/index/*" % p_executions_table_name.title,
                                     region = vAWSRegion,
                                     account = vAWSAccountId,
                                 )),
@@ -340,6 +364,14 @@ def create_template():
                                 ac_ssm.GetParameter,
                             ],
                         ),
+                        Statement(
+                            Effect = Allow,
+                            Resource = ["*"],
+                            Action = [
+                                ac_xray.PutTraceSegments,
+                                ac_xray.PutTelemetryRecords,
+                            ],
+                        ),
                     ]
                 )
             )
@@ -374,6 +406,11 @@ def create_template():
                                     account = vAWSAccountId,
                                 )),
                                 Sub(ac_dynamodb.ARN(
+                                    resource = "table/${%s}/index/*" % p_config_table_name.title,
+                                    region = vAWSRegion,
+                                    account = vAWSAccountId,
+                                )),
+                                Sub(ac_dynamodb.ARN(
                                     resource = "table/${%s}" % p_locks_table_name.title,
                                     region = vAWSRegion,
                                     account = vAWSAccountId,
@@ -385,6 +422,11 @@ def create_template():
                                 )),
                                 Sub(ac_dynamodb.ARN(
                                     resource = "table/${%s}" % p_executions_table_name.title,
+                                    region = vAWSRegion,
+                                    account = vAWSAccountId,
+                                )),
+                                Sub(ac_dynamodb.ARN(
+                                    resource = "table/${%s}/index/*" % p_executions_table_name.title,
                                     region = vAWSRegion,
                                     account = vAWSAccountId,
                                 )),
@@ -458,6 +500,14 @@ def create_template():
                             ],
                             Action = [
                                 ac_ssm.PutParameter,
+                            ],
+                        ),
+                        Statement(
+                            Effect = Allow,
+                            Resource = ["*"],
+                            Action = [
+                                ac_xray.PutTraceSegments,
+                                ac_xray.PutTelemetryRecords,
                             ],
                         ),
                     ]
@@ -547,6 +597,14 @@ def create_template():
                             ],
                             Action = [
                                 ac_ssm.GetParameter,
+                            ],
+                        ),
+                        Statement(
+                            Effect = Allow,
+                            Resource = ["*"],
+                            Action = [
+                                ac_xray.PutTraceSegments,
+                                ac_xray.PutTelemetryRecords,
                             ],
                         ),
                     ]
@@ -756,6 +814,13 @@ def create_template():
         Timeout = 60,
         Environment = lambda_env_vars,
         Tags = tags,
+        TracingConfig = TracingConfig(
+            Mode = If(
+                "HasXRay",
+                "Active",
+                "PassThrough",
+            ),
+        ),
     ))
 
     r_api_lambda = t.add_resource(Function(
@@ -772,6 +837,13 @@ def create_template():
         Timeout = 60,
         Environment = lambda_env_vars,
         Tags = tags,
+        TracingConfig = TracingConfig(
+            Mode = If(
+                "HasXRay",
+                "Active",
+                "PassThrough",
+            ),
+        ),
     ))
 
     r_step_lambda = t.add_resource(Function(
@@ -788,6 +860,13 @@ def create_template():
         Timeout = 60,
         Environment = lambda_env_vars,
         Tags = tags,
+        TracingConfig = TracingConfig(
+            Mode = If(
+                "HasXRay",
+                "Active",
+                "PassThrough",
+            ),
+        ),
     ))
 
     def create_lambda_log_group(lambda_function, role):

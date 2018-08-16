@@ -10,6 +10,9 @@ Conditions:
     - !Equals
       - !Ref 'SecretsKMSUserArns'
       - -NONE-
+  HasXRay: !Equals
+    - !Ref 'EnableXRay'
+    - 'true'
   HasTag1: !Not
     - !Or
       - !Equals
@@ -239,6 +242,13 @@ Parameters:
     Description: The path to the file in the repo that contains the build configuration.
     Type: String
     Default: .cbuildci.yml
+  EnableXRay:
+    Description: Set to true to enable AWS X-Ray for the lambda functions
+    Type: String
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Default: 'false'
   Tag1Name:
     Type: String
     Default: -NONE-
@@ -318,8 +328,10 @@ Resources:
               - Effect: Allow
                 Resource:
                   - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ConfigTableName}'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ConfigTableName}/index/*'
                   - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${LocksTableName}'
                   - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ExecutionsTableName}'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ExecutionsTableName}/index/*'
                 Action:
                   - dynamodb:Query
                   - dynamodb:GetItem
@@ -338,6 +350,12 @@ Resources:
                   - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${GitHubAppPrivateKeyParamName}'
                 Action:
                   - ssm:GetParameter
+              - Effect: Allow
+                Resource:
+                  - '*'
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
     Type: AWS::IAM::Role
   ApiLambdaRole:
     Properties:
@@ -357,9 +375,11 @@ Resources:
               - Effect: Allow
                 Resource:
                   - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ConfigTableName}'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ConfigTableName}/index/*'
                   - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${LocksTableName}'
                   - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${SessionsTableName}'
                   - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ExecutionsTableName}'
+                  - !Sub 'arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${ExecutionsTableName}/index/*'
                 Action:
                   - dynamodb:Query
                   - dynamodb:GetItem
@@ -385,6 +405,12 @@ Resources:
                   - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${GitHubAppPrivateKeyParamName}'
                 Action:
                   - ssm:PutParameter
+              - Effect: Allow
+                Resource:
+                  - '*'
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
     Type: AWS::IAM::Role
   StepLambdaRole:
     Properties:
@@ -428,6 +454,12 @@ Resources:
                   - !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/${GitHubAppPrivateKeyParamName}'
                 Action:
                   - ssm:GetParameter
+              - Effect: Allow
+                Resource:
+                  - '*'
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
     Type: AWS::IAM::Role
   SecretsKMSKey:
     Properties:
@@ -716,6 +748,11 @@ Resources:
               Value: !Ref 'Tag10Value'
             - !Ref 'AWS::NoValue'
         - !Ref 'AWS::NoValue'
+      TracingConfig:
+        Mode: !If
+          - HasXRay
+          - Active
+          - PassThrough
     Type: AWS::Lambda::Function
   ApiLambda:
     Properties:
@@ -810,6 +847,11 @@ Resources:
               Value: !Ref 'Tag10Value'
             - !Ref 'AWS::NoValue'
         - !Ref 'AWS::NoValue'
+      TracingConfig:
+        Mode: !If
+          - HasXRay
+          - Active
+          - PassThrough
     Type: AWS::Lambda::Function
   StepLambda:
     Properties:
@@ -904,6 +946,11 @@ Resources:
               Value: !Ref 'Tag10Value'
             - !Ref 'AWS::NoValue'
         - !Ref 'AWS::NoValue'
+      TracingConfig:
+        Mode: !If
+          - HasXRay
+          - Active
+          - PassThrough
     Type: AWS::Lambda::Function
   WebhookLambdaLogGroup:
     Properties:
