@@ -135,12 +135,12 @@ exports.getTableItemByKey = async function getTableItemByKey(tableName, key, ser
         : null;
 };
 
-exports.queryTableItem = async function queryTableItem(
+exports.queryTable = async function queryTable(
     tableName,
     conditionExpression,
     expressionAttributeNames,
     expressionAttributeValues,
-    { limit, reverse = false } = {},
+    { limit, reverse = false, indexName = null } = {},
     serviceParams = {},
 ) {
     const dynamoDB = new AWS.DynamoDB({
@@ -153,14 +153,20 @@ exports.queryTableItem = async function queryTableItem(
         service: dynamoDB,
     });
 
-    const response = await documentClient.query({
+    const params = {
         TableName: tableName,
         KeyConditionExpression: conditionExpression,
         ExpressionAttributeNames: expressionAttributeNames,
         ExpressionAttributeValues: expressionAttributeValues,
         ScanIndexForward: !reverse,
         Limit: limit,
-    }).promise();
+    };
+
+    if (indexName != null) {
+        params.IndexName = indexName;
+    }
+
+    const response = await documentClient.query(params).promise();
 
     return {
         items: response.Items,
@@ -374,7 +380,7 @@ exports.getNextExecutionId = async function getNextExecutionId(
     commit,
     serviceParams = {},
 ) {
-    const records = await exports.queryTableItem(
+    const records = await exports.queryTable(
         tableName,
         '#id = :id and begins_with(#cs, :cs)',
         {
@@ -388,6 +394,7 @@ exports.getNextExecutionId = async function getNextExecutionId(
         {
             limit: 1,
             reverse: true,
+            indexName: 'search-repoId-executionId-index',
         },
         serviceParams,
     );
