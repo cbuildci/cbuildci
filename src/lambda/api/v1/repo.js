@@ -5,7 +5,7 @@ const util = require('../../../common/util');
 const aws = require('../../util/aws');
 const github = require('../../util/github');
 
-async function getExecution(token, ctx) {
+async function getExecution(ctx) {
     const repoId = util.buildRepoId(
         ctx.params.owner,
         ctx.params.repo,
@@ -30,7 +30,7 @@ async function getExecution(token, ctx) {
     return execution;
 }
 
-async function verifyRepoAccess(token, ctx, execution = null) {
+async function verifyRepoAccess(token, ctx, githubRepoId = null) {
     const { owner, repo } = ctx.params;
 
     const repositoryResponse = await github.getRepository(
@@ -45,77 +45,94 @@ async function verifyRepoAccess(token, ctx, execution = null) {
         ctx.throw(404, 'Repository or execution not found');
     }
 
-    if (execution) {
+    if (githubRepoId) {
         // Verify the repo id matches the one in the execution,
         // just in case a user/repo was deleted and then recreated.
-        if (repositoryResponse.data.id !== execution.meta.githubRepo.id) {
-            ctx.logWarn(`Repository ${util.buildRepoId(owner, repo)} mismatched id in execution: ${repositoryResponse.data.id} !== ${execution.meta.githubRepo.id}`);
+        if (repositoryResponse.data.id !== githubRepoId) {
+            ctx.logWarn(`Repository ${util.buildRepoId(owner, repo)} mismatched id in execution: ${repositoryResponse.data.id} !== ${githubRepoId}`);
             ctx.throw(500, 'The internal ID for the repository does not match (was the repo deleted and recreated?)');
         }
     }
 
     if (!repositoryResponse.data.permissions.push) {
-        ctx.logWarn(`User "${ctx.session.githubUser.login}" (${ctx.session.githubUser.id}) does not have write access to repo ${repoId}`);
+        ctx.logWarn(`User "${ctx.session.githubUser.login}" (${ctx.session.githubUser.id}) does not have write access to repo ${util.buildRepoId(owner, repo)}`);
         ctx.throw(404, 'Repository or execution not found');
     }
+}
+
+/**
+ * Helper for using signed access keys to more quickly access data related to repos.
+ *
+ * @param {object} ctx
+ * @param {string} headerName - HTTP header name for access key
+ * @param {function} getGithubAuthToken - Function that returns the Github OAuth token fro the logged in user. Can return a Promise.
+ * @param {boolean} createAccessKey - Whether or not to create the access key if it does not exist.
+ * @param {number} [executionGithubRepoId] - GitHub's numerical ID for the repo. If provided, used to verify that it is the exact repo and not just one with the same name.
+ * @returns {Promise<string>}
+ */
+async function verifyRepoAccessByKey(ctx, headerName, getGithubAuthToken, createAccessKey, executionGithubRepoId) {
+    let accessKey = ctx.headers[headerName] || null;
+
+    // Verify the encrypted access key, if provided.
+    if (accessKey) {
+        try {
+            // Decrypt and parse the access key.
+            const {
+                sessionInternalIdentifier,
+                expirationTime,
+                accessTo,
+            } = JSON.parse((await aws.decryptString(accessKey)).toString('utf8'));
+
+            // Reset the access key if isn't valid or has expired.
+            if (sessionInternalIdentifier !== ctx.session.internalIdentifier
+                || expirationTime < Date.now()
+                || accessTo !== ctx.url) {
+                accessKey = null;
+            }
+        }
+        catch (err) {
+            accessKey = null;
+            ctx.logError(`Invalid execution access key for user "${ctx.session.githubUser.login}" (${ctx.session.githubUser.id}): [${err.name}] ${err.message}`);
+        }
+    }
+
+    // Create a temporary access key, if one was not provided and the execution has not completed.
+    // This allows us to reduce the number of requests to GitHub when the UI is continually fetching execution data.
+    if (!accessKey && createAccessKey) {
+        await verifyRepoAccess(await getGithubAuthToken(), ctx, executionGithubRepoId);
+        accessKey = await aws.encryptString(
+            ctx.ciApp.secretsKMSArn,
+            JSON.stringify({
+                sessionInternalIdentifier: ctx.session.internalIdentifier,
+                expirationTime: Date.now() + 300000, // 5 minutes
+                accessTo: ctx.url,
+            }),
+        );
+    }
+
+    return accessKey;
 }
 
 module.exports = koaRouter({
     prefix: '/:owner/:repo',
 })
     .get('/commit/:commit/exec/:executionNum', async (ctx) => {
-        const token = (
-            await aws.decryptString(ctx.session.encryptedGithubAuthToken)
-        ).toString('utf8');
+        const execution = await getExecution(ctx);
 
-        const execution = await getExecution(token, ctx);
-
-        let executionAccessKey = ctx.headers['x-execution-access-key'];
-
-        // Verify the encrypted access key, if provided.
-        if (executionAccessKey) {
-            try {
-                // Decrypt and parse the access key.
-                const {
-                    sessionInternalIdentifier,
-                    expirationTime,
-                    accessTo,
-                } = JSON.parse((await aws.decryptString(executionAccessKey)).toString('utf8'));
-
-                // Reset the access key if isn't valid or has expired.
-                if (sessionInternalIdentifier !== ctx.session.internalIdentifier
-                    || expirationTime < Date.now()
-                    || accessTo !== ctx.url) {
-                    executionAccessKey = null;
-                }
-            }
-            catch (err) {
-                executionAccessKey = null;
-                ctx.logError(`Invalid execution access key for user "${ctx.session.githubUser.login}" (${ctx.session.githubUser.id}): [${err.name}] ${err.message}`);
-            }
-        }
-
-        // Create a temporary access key, if one was not provided and the execution has not completed.
-        // This allows us to reduce the number of requests to GitHub when the UI is continually fetching execution data.
-        if (!executionAccessKey && execution.status !== 'COMPLETED') {
-            await verifyRepoAccess(token, ctx, execution);
-            executionAccessKey = await aws.encryptString(
-                ctx.ciApp.secretsKMSArn,
-                JSON.stringify({
-                    sessionInternalIdentifier: ctx.session.internalIdentifier,
-                    expirationTime: Date.now() + 300000, // 5 minutes
-                    accessTo: ctx.url,
-                }),
-            );
-        }
+        const accessKey = await verifyRepoAccessByKey(
+            ctx,
+            'x-execution-access-key',
+            async () => (
+                await aws.decryptString(ctx.session.encryptedGithubAuthToken)
+            ).toString('utf8'),
+            execution.status !== 'COMPLETED',
+            execution.meta.githubRepo.id,
+        );
 
         ctx.body = {
             // Destruct the IDs into their parts.
             ...util.parseRepoId(execution.repoId),
             ...util.parseExecutionId(execution.executionId),
-
-            // Include the access key, if it was set.
-            executionAccessKey,
 
             repoId: execution.repoId,
             executionId: execution.executionId,
@@ -131,15 +148,20 @@ module.exports = koaRouter({
                 commitSHA: execution.state.commitSHA,
                 builds: execution.state.builds,
             },
+
+            // Include the access key (may be null).
+            accessKey,
         };
     })
 
     .get('/commit/:commit/exec/:executionNum/stop', async (ctx) => {
+        const execution = await getExecution(ctx);
+
         const token = (
             await aws.decryptString(ctx.session.encryptedGithubAuthToken)
         ).toString('utf8');
 
-        const execution = await getExecution(token, ctx);
+        await verifyRepoAccess(token, ctx, execution.meta.githubRepo.id);
 
         if (!execution.state || !execution.state.isRunning || execution.state.errorInfo) {
             ctx.throw(400, 'Execution is not running');
@@ -168,66 +190,18 @@ module.exports = koaRouter({
         };
     })
 
-    .get('/commit/:commit/exec/:executionNum/build/:buildKey', async (ctx) => {
-        const token = (
-            await aws.decryptString(ctx.session.encryptedGithubAuthToken)
-        ).toString('utf8');
-
-        const execution = await getExecution(token, ctx);
-
-        const build = execution.state && execution.state.builds
-            && execution.state.builds[ctx.params.buildKey];
-
-        if (!build) {
-            ctx.throw(404, 'Build not found for execution');
-        }
-
-        const buildStatus = build.codeBuild && (
-            await aws.getBatchBuildStatus(
-                [aws.parseArn(build.codeBuild.arn).buildId],
-            )
-        )[0];
-
-        let latestLogs = null;
-        if (buildStatus && buildStatus.logs) {
-            try {
-                latestLogs = await aws.getLogEvents(
-                    buildStatus.logs.groupName,
-                    buildStatus.logs.streamName,
-                    {
-                        limit: 20,
-                    },
-                );
-            }
-            catch (err) {
-                ctx.logError(`Failed to get logs: ${err.message}`);
-            }
-        }
-
-        ctx.body = {
-            build,
-            status: buildStatus ? {
-                id: buildStatus.id,
-                arn: buildStatus.arn,
-                startTime: buildStatus.startTime,
-                endTime: buildStatus.endTime,
-                currentPhase: buildStatus.currentPhase,
-                buildStatus: buildStatus.buildStatus,
-                projectName: buildStatus.projectName,
-                buildComplete: buildStatus.buildComplete,
-                logs: buildStatus.logs,
-                phases: buildStatus.phases,
-            } : null,
-            latestLogs,
-        };
-    })
-
     .get('/commit/:commit/exec/:executionNum/build/:buildKey/logs', async (ctx) => {
-        const token = (
-            await aws.decryptString(ctx.session.encryptedGithubAuthToken)
-        ).toString('utf8');
+        const execution = await getExecution(ctx);
 
-        const execution = await getExecution(token, ctx);
+        const accessKey = await verifyRepoAccessByKey(
+            ctx,
+            'x-execution-logs-access-key',
+            async () => (
+                await aws.decryptString(ctx.session.encryptedGithubAuthToken)
+            ).toString('utf8'),
+            true,
+            execution.meta.githubRepo.id,
+        );
 
         const build = execution.state && execution.state.builds
             && execution.state.builds[ctx.params.buildKey];
@@ -263,5 +237,6 @@ module.exports = koaRouter({
             events: logResponse.events,
             nextForwardToken: logResponse.nextForwardToken,
             nextBackwardToken: logResponse.nextBackwardToken,
+            accessKey,
         };
     });
