@@ -268,6 +268,21 @@ exports.toEpochTime = function toEpochTime(dt) {
         return null;
     }
 
+    const time = new Date(dt).getTime();
+
+    if (Number.isNaN(time)) {
+        // TODO: Throw error on invalid date?
+        return null;
+    }
+
+    return time;
+};
+
+exports.toISODateString = function toISODateString(dt) {
+    if (!dt && dt !== 0) {
+        return null;
+    }
+
     dt = new Date(dt);
 
     if (Number.isNaN(dt.getTime())) {
@@ -275,12 +290,5 @@ exports.toEpochTime = function toEpochTime(dt) {
         return null;
     }
 
-    return dt.getTime();
-};
-
-exports.toISODateString = function toISODateString(dt) {
-    dt = exports.toEpochTime(dt);
-    return dt == null
-        ? dt
-        : dt.toISOString();
+    return dt.toISOString();
 };
