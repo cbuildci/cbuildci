@@ -1,6 +1,5 @@
 'use strict';
 
-const uuid = require('uuid');
 const yaml = require('js-yaml');
 const { VError } = require('../../../common/v');
 const util = require('../../../common/util');

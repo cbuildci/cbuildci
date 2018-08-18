@@ -25,6 +25,7 @@ koaApp.use(async (ctx, next) => {
         throw err;
     }
     finally {
+        // eslint-disable-next-line no-console
         console.log(`Request took ${Date.now() - start}ms`);
     }
 });
