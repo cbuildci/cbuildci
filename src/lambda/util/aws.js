@@ -437,7 +437,7 @@ exports.getExecutionsForCommit = async function getExecutionsForCommit(
 exports.getExecutionsForRepo = async function getExecutionsForRepo(
     tableName,
     repoId,
-    { limit = 50, reverse = true },
+    { limit = 10, reverse = true },
     serviceParams = {},
 ) {
     return await exports.queryTable(
