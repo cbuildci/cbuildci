@@ -139,14 +139,8 @@ module.exports = koaRouter({
             executions: results.items.map((execution) => ({
                 ...util.parseRepoId(execution.repoId),
                 ...util.parseExecutionId(execution.executionId),
-                repoId: execution.repoId,
-                executionId: execution.executionId,
-                status: execution.status,
-                createTime: execution.createTime,
-                updateTime: execution.updateTime,
-                conclusion: execution.conclusion,
-                conclusionTime: execution.conclusionTime,
-                meta: execution.meta,
+
+                ...execution,
             })),
             lastEvaluatedKey: results.lastEvaluatedKey,
         };
@@ -161,11 +155,25 @@ module.exports = koaRouter({
 
         const { owner, repo, commit } = ctx.params;
 
-        ctx.body = await aws.getExecutionsForCommit(
+        const {
+            items,
+            lastEvaluatedKey,
+        } = await aws.getExecutionsForCommit(
             ctx.ciApp.tableExecutionsName,
             util.buildRepoId(owner, repo),
             commit,
         );
+
+        ctx.body = {
+            executions: items.map((execution) => ({
+                // Destruct the IDs into their parts.
+                ...util.parseRepoId(execution.repoId),
+                ...util.parseExecutionId(execution.executionId),
+
+                ...execution,
+            })),
+            lastEvaluatedKey,
+        };
     })
 
     .get('/commit/:commit/exec/:executionNum', async (ctx) => {
