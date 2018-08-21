@@ -129,7 +129,7 @@ module.exports = async function handleCheckEvent(ctx, gitHubEventType, ghEvent, 
                 name: ghEvent.repository.name,
             },
             {
-                event: gitHubEventType,
+                type: gitHubEventType,
                 action: ghEvent.action,
                 sender: {
                     id: ghEvent.sender.id,

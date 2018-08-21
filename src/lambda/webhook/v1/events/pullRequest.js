@@ -135,7 +135,7 @@ module.exports = async function handlePullRequestEvent(ctx, ghEvent, repoConfig)
             name: ghEvent.repository.name,
         },
         {
-            event: 'pull_request',
+            type: 'pull_request',
             action: ghEvent.action,
             pull_request: {
                 id: ghEvent.pull_request.id,
