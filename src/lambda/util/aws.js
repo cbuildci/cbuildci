@@ -411,6 +411,7 @@ exports.getExecutionsForCommit = async function getExecutionsForCommit(
     tableName,
     repoId,
     commit,
+    { limit = 10, reverse = true },
     serviceParams = {},
 ) {
     return await exports.queryTable(
@@ -425,8 +426,9 @@ exports.getExecutionsForCommit = async function getExecutionsForCommit(
             ':cs': `${commit}/`,
         },
         {
-            reverse: true,
-            indexName: 'search-repoId-executionId',
+            limit,
+            reverse,
+            indexName: 'search-repoId-executionId-index',
         },
         serviceParams,
     );
