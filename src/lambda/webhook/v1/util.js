@@ -53,7 +53,7 @@ exports.startExecution = async function startExecution(
     repoConfig,
     githubOwner,
     githubRepo,
-    initiator,
+    event,
     installationId,
     commitSHA
 ) {
@@ -283,7 +283,7 @@ exports.startExecution = async function startExecution(
             installationId: state.installationId,
             githubOwner,
             githubRepo,
-            initiator,
+            event,
             webhookTraceId: state.traceId,
         },
         state,
