@@ -254,6 +254,7 @@ def create_template():
                         "status",
                         "conclusion",
                         "conclusionTime",
+                        "meta",
                     ],
                     ProjectionType = "INCLUDE",
                 ),
