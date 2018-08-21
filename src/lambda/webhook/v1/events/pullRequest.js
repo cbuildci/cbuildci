@@ -149,6 +149,11 @@ module.exports = async function handlePullRequestEvent(ctx, ghEvent, repoConfig)
                     sha: ghEvent.pull_request.base.sha,
                 },
             },
+            sender: {
+                id: ghEvent.sender.id,
+                login: ghEvent.sender.login,
+                type: ghEvent.sender.type,
+            },
         },
         isForGitHubApp ? ghEvent.installation.id : null,
         ghEvent.pull_request.head.sha,
@@ -192,5 +197,21 @@ function validatePullRequestEvent(ctx, ghEvent) {
 
     if (typeof ghEvent.pull_request.base.sha !== 'string' || !util.isValidSha(ghEvent.pull_request.base.sha)) {
         ctx.throw(400, 'Invalid or missing pull_request.base.sha');
+    }
+
+    if (!ghEvent.sender) {
+        ctx.throw(400, 'Missing or invalid sender');
+    }
+
+    if (typeof ghEvent.sender.id !== 'number') {
+        ctx.throw(400, 'Missing or non-number sender.id property');
+    }
+
+    if (typeof ghEvent.sender.login !== 'string') {
+        ctx.throw(400, 'Missing or non-string sender.login property');
+    }
+
+    if (typeof ghEvent.sender.type !== 'string') {
+        ctx.throw(400, 'Missing or non-string sender.type property');
     }
 }
