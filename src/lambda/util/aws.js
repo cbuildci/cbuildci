@@ -1,6 +1,18 @@
 'use strict';
 
-const AWSXRay = require('aws-xray-sdk');
+const AWSXRay = (() => {
+    try {
+        return require('aws-xray-sdk');
+    }
+    catch (err) {
+        return {
+            captureAWS(sdk) {
+                return sdk;
+            },
+        };
+    }
+})();
+
 const AWS = AWSXRay.captureAWS(require('aws-sdk'));
 const util = require('../../common/util');
 
