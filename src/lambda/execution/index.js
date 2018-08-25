@@ -498,12 +498,12 @@ async function executionHandler(state, ciApp, traceId) {
 
             // Include core env vars and add in any specified in the build params.
             environmentVariablesOverride: [
-                { name: 'C_COMMIT_SHA', value: state.commitSHA },
-                { name: 'C_TRACE_ID', value: traceId },
-                { name: 'C_SOURCE_S3_BUCKET', value: buildState.buildParams.sourceS3Bucket },
-                { name: 'C_SOURCE_S3_KEY_PREFIX', value: sourceS3KeyPrefix },
-                { name: 'C_ARTIFACT_S3_BUCKET', value: buildState.buildParams.noArtifacts ? null : buildState.buildParams.artifactS3Bucket },
-                { name: 'C_ARTIFACT_S3_KEY_PREFIX', value: buildState.buildParams.noArtifacts ? null : artifactS3KeyPrefix },
+                { name: 'CBUILDCI_COMMIT_SHA', value: state.commitSHA },
+                { name: 'CBUILDCI_TRACE_ID', value: traceId },
+                { name: 'CBUILDCI_SOURCE_S3_BUCKET', value: buildState.buildParams.sourceS3Bucket },
+                { name: 'CBUILDCI_SOURCE_S3_KEY_PREFIX', value: sourceS3KeyPrefix },
+                { name: 'CBUILDCI_ARTIFACT_S3_BUCKET', value: buildState.buildParams.noArtifacts ? null : buildState.buildParams.artifactS3Bucket },
+                { name: 'CBUILDCI_ARTIFACT_S3_KEY_PREFIX', value: buildState.buildParams.noArtifacts ? null : artifactS3KeyPrefix },
                 // TODO: Include data for other started/completed builds so this build can use their resources.
             ]
                 .concat(buildState.buildParams.environmentVariables)

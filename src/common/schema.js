@@ -187,7 +187,7 @@ exports.validateBuildParams = v.top(
                     props({
                         name: v(
                             isRequired(),
-                            isString({ notStartsWith: 'C_' }),
+                            isString({ notStartsWith: 'CBUILDCI_' }),
                         ),
                         value: v(
                             isRequired(),
