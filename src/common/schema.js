@@ -223,6 +223,10 @@ exports.validateBuildParams = v.top(
             isRequired({ defaultTo: '', allowEmptyString: true }),
             isString({ notStartsWith: '/' }),
         ),
+        noArtifacts: v(
+            isOptional({ defaultTo: false }),
+            isBoolean(),
+        ),
         artifactS3Bucket: v(
             isOptional(),
             isString({ min: 1 }),
