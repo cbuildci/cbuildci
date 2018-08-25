@@ -120,6 +120,9 @@ exports.validateBuildsYml = v.top(
  * @property {boolean} noArtifacts
  * @property {string} artifactS3Bucket
  * @property {string} artifactS3KeyPrefix
+ * @property {boolean} useCache
+ * @property {string} cacheS3Bucket
+ * @property {string} cacheS3KeyPrefix
  */
 
 /**
@@ -232,6 +235,18 @@ exports.validateBuildParams = v.top(
             isString({ min: 1 }),
         ),
         artifactS3KeyPrefix: v(
+            isRequired({ defaultTo: '', allowEmptyString: true }),
+            isString({ notStartsWith: '/' }),
+        ),
+        useCache: v(
+            isOptional({ defaultTo: false }),
+            isBoolean(),
+        ),
+        cacheS3Bucket: v(
+            isOptional(),
+            isString({ min: 1 }),
+        ),
+        cacheS3KeyPrefix: v(
             isRequired({ defaultTo: '', allowEmptyString: true }),
             isString({ notStartsWith: '/' }),
         ),

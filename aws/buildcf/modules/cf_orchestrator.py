@@ -117,6 +117,13 @@ def create_template():
         Default = "github-artifacts/",
     ))
 
+    p_cache_key_prefix = t.add_parameter(Parameter(
+        "CacheKeyPrefix",
+        Description = "Path prefix for storing cache artifacts in the artifact bucket.",
+        Type = "String",
+        Default = "github-cache/",
+    ))
+
     p_source_key_prefix = t.add_parameter(Parameter(
         "SourceKeyPrefix",
         Description = "Path prefix for source zips in the artifact bucket.",
@@ -778,6 +785,11 @@ def create_template():
             "ARTIFACT_S3_KEY_PREFIX_DEFAULT": Sub(
                 "${%s}{GitHubDomain}/{GitHubUser}/{GitHubRepo}/"
                 % p_artifact_key_prefix.title
+            ),
+            "CACHE_S3_BUCKET_DEFAULT": Ref(p_artifact_bucket_name),
+            "CACHE_S3_KEY_PREFIX_DEFAULT": Sub(
+                "${%s}{GitHubDomain}/{GitHubUser}/{GitHubRepo}/"
+                % p_cache_key_prefix.title
             ),
             "GH_URL": Ref(p_github_url),
             "GH_API_URL": Ref(p_github_api_url),

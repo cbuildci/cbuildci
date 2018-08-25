@@ -173,6 +173,10 @@ Parameters:
     Description: Path prefix for storing artifacts in the artifact bucket.
     Type: String
     Default: github-artifacts/
+  CacheKeyPrefix:
+    Description: Path prefix for storing cache artifacts in the artifact bucket.
+    Type: String
+    Default: github-cache/
   SourceKeyPrefix:
     Description: Path prefix for source zips in the artifact bucket.
     Type: String
@@ -682,6 +686,8 @@ Resources:
           SOURCE_S3_KEY_PREFIX_DEFAULT: !Sub '${SourceKeyPrefix}{GitHubDomain}/{GitHubUser}/{GitHubRepo}/'
           ARTIFACT_S3_BUCKET_DEFAULT: !Ref 'ArtifactBucketName'
           ARTIFACT_S3_KEY_PREFIX_DEFAULT: !Sub '${ArtifactKeyPrefix}{GitHubDomain}/{GitHubUser}/{GitHubRepo}/'
+          CACHE_S3_BUCKET_DEFAULT: !Ref 'ArtifactBucketName'
+          CACHE_S3_KEY_PREFIX_DEFAULT: !Sub '${CacheKeyPrefix}{GitHubDomain}/{GitHubUser}/{GitHubRepo}/'
           GH_URL: !Ref 'GitHubUrl'
           GH_API_URL: !Ref 'GitHubApiUrl'
           GH_APP_ID: !Ref 'GitHubAppId'
@@ -781,6 +787,8 @@ Resources:
           SOURCE_S3_KEY_PREFIX_DEFAULT: !Sub '${SourceKeyPrefix}{GitHubDomain}/{GitHubUser}/{GitHubRepo}/'
           ARTIFACT_S3_BUCKET_DEFAULT: !Ref 'ArtifactBucketName'
           ARTIFACT_S3_KEY_PREFIX_DEFAULT: !Sub '${ArtifactKeyPrefix}{GitHubDomain}/{GitHubUser}/{GitHubRepo}/'
+          CACHE_S3_BUCKET_DEFAULT: !Ref 'ArtifactBucketName'
+          CACHE_S3_KEY_PREFIX_DEFAULT: !Sub '${CacheKeyPrefix}{GitHubDomain}/{GitHubUser}/{GitHubRepo}/'
           GH_URL: !Ref 'GitHubUrl'
           GH_API_URL: !Ref 'GitHubApiUrl'
           GH_APP_ID: !Ref 'GitHubAppId'
@@ -880,6 +888,8 @@ Resources:
           SOURCE_S3_KEY_PREFIX_DEFAULT: !Sub '${SourceKeyPrefix}{GitHubDomain}/{GitHubUser}/{GitHubRepo}/'
           ARTIFACT_S3_BUCKET_DEFAULT: !Ref 'ArtifactBucketName'
           ARTIFACT_S3_KEY_PREFIX_DEFAULT: !Sub '${ArtifactKeyPrefix}{GitHubDomain}/{GitHubUser}/{GitHubRepo}/'
+          CACHE_S3_BUCKET_DEFAULT: !Ref 'ArtifactBucketName'
+          CACHE_S3_KEY_PREFIX_DEFAULT: !Sub '${CacheKeyPrefix}{GitHubDomain}/{GitHubUser}/{GitHubRepo}/'
           GH_URL: !Ref 'GitHubUrl'
           GH_API_URL: !Ref 'GitHubApiUrl'
           GH_APP_ID: !Ref 'GitHubAppId'

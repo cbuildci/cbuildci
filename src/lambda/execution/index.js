@@ -1,5 +1,6 @@
 'use strict';
 
+const path = require('path');
 const fs = require('fs');
 const yauzl = require('yauzl');
 const archiver = require('archiver');
@@ -427,6 +428,11 @@ async function executionHandler(state, ciApp, traceId) {
             .replace('{GitHubUser}', state.owner)
             .replace('{GitHubRepo}', state.repo);
 
+        const cacheS3KeyPrefix = buildState.buildParams.useCache && buildState.buildParams.cacheS3KeyPrefix
+            .replace('{GitHubDomain}', url.parse(ciApp.githubUrl).host)
+            .replace('{GitHubUser}', state.owner)
+            .replace('{GitHubRepo}', state.repo);
+
         const sourceS3Key = `${sourceS3KeyPrefix}source_${state.commitSHA}.zip`;
         const sourceUploadedId = `${buildState.buildParams.sourceS3Bucket}/${sourceS3Key}`;
 
@@ -504,6 +510,8 @@ async function executionHandler(state, ciApp, traceId) {
                 { name: 'CBUILDCI_SOURCE_S3_KEY_PREFIX', value: sourceS3KeyPrefix },
                 { name: 'CBUILDCI_ARTIFACT_S3_BUCKET', value: buildState.buildParams.noArtifacts ? null : buildState.buildParams.artifactS3Bucket },
                 { name: 'CBUILDCI_ARTIFACT_S3_KEY_PREFIX', value: buildState.buildParams.noArtifacts ? null : artifactS3KeyPrefix },
+                { name: 'CBUILDCI_CACHE_S3_BUCKET', value: buildState.buildParams.useCache ? buildState.buildParams.cacheS3Bucket : null },
+                { name: 'CBUILDCI_CACHE_S3_KEY_PREFIX', value: buildState.buildParams.useCache ? cacheS3KeyPrefix : null },
                 // TODO: Include data for other started/completed builds so this build can use their resources.
             ]
                 .concat(buildState.buildParams.environmentVariables)
@@ -521,6 +529,13 @@ async function executionHandler(state, ciApp, traceId) {
                 name: 'artifacts',
                 namespaceType: 'BUILD_ID',
                 packaging: 'NONE',
+            },
+
+            cacheOverride: buildState.buildParams.useCache ? {
+                type: 'S3',
+                location: `${path.join(buildState.buildParams.cacheS3Bucket, cacheS3KeyPrefix || '.').replace(/\/$/, '')}`,
+            } : {
+                type: 'NO_CACHE',
             },
         });
 

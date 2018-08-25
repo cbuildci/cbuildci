@@ -70,6 +70,17 @@ def create_template():
         Default = "github-artifacts/",
     ))
 
+    p_cache_bucket = t.add_parameter(Parameter(
+        "CacheBucket",
+        Type = "String",
+    ))
+
+    p_cache_key_prefix = t.add_parameter(Parameter(
+        "CacheKeyPrefix",
+        Type = "String",
+        Default = "github-cache/",
+    ))
+
     p_logs_retention_days = t.add_parameter(Parameter(
         "LogsRetentionDays",
         Description = "Number of days to keep CloudWatch logs for this stack's lambda function.",
@@ -227,6 +238,12 @@ def create_template():
                                     resource = "${%s}/${%s}*" % (
                                         p_artifact_bucket.title,
                                         p_artifact_key_prefix.title,
+                                    ),
+                                )),
+                                Sub(ac_s3.ARN(
+                                    resource = "${%s}/${%s}*" % (
+                                        p_cache_bucket.title,
+                                        p_cache_key_prefix.title,
                                     ),
                                 )),
                             ],

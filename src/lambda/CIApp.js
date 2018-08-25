@@ -152,6 +152,8 @@ CIApp.create = (env) => {
             sourceS3KeyPrefix: env.SOURCE_S3_KEY_PREFIX_DEFAULT,
             artifactS3Bucket: env.ARTIFACT_S3_BUCKET_DEFAULT,
             artifactS3KeyPrefix: env.ARTIFACT_S3_KEY_PREFIX_DEFAULT,
+            cacheS3Bucket: env.CACHE_S3_BUCKET_DEFAULT,
+            cacheS3KeyPrefix: env.CACHE_S3_KEY_PREFIX_DEFAULT,
         },
     });
 };
