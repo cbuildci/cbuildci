@@ -502,6 +502,7 @@ Resources:
               - status
               - conclusion
               - conclusionTime
+              - meta
             ProjectionType: INCLUDE
           ProvisionedThroughput:
             ReadCapacityUnits: !Ref 'ExecutionsSearchIndexesRCU'
