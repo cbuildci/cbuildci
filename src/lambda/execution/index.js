@@ -628,7 +628,7 @@ function getExecutionSummary(state) {
                 .map(({ buildKey, status, codeBuild }) => {
                     const icon = statusToEmoji[status] || '';
                     const { commit, executionNum } = util.parseExecutionId(state.executionId);
-                    const link = `${ciApp.baseUrl}/api/v1/repo/${state.repoId}/commit/${commit}/exec/${executionNum}/build/${buildKey}`;
+                    const link = `${ciApp.baseUrl}/app/repo/${state.repoId}/commit/${commit}/exec/${executionNum}/build/${buildKey}`;
                     const currentPhase = codeBuild && codeBuild.currentPhase;
                     const duration = codeBuild && codeBuild.startTime && codeBuild.endTime
                         ? `${Math.round((util.toEpochTime(codeBuild.endTime) - util.toEpochTime(codeBuild.startTime)) / 1000)}s`
