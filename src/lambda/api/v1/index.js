@@ -4,8 +4,15 @@ const koaRouter = require('koa-router');
 
 module.exports = koaRouter()
 
+    // ===================================================
+    // APIs that do NOT require login
+    // ===================================================
+
     // Auth routes are used to manage the login session.
     .use('/auth', require('./auth').routes())
+
+    // Basic application config and user info.
+    .use('/state', require('./state').routes())
 
     // Require login session for other routes.
     .use(async (ctx, next) => {
@@ -19,7 +26,9 @@ module.exports = koaRouter()
         }
     })
 
-    .use('/user', require('./user').routes())
+    // ===================================================
+    // APIs that DO require login
+    // ===================================================
 
     // Routes that require a login session.
     .use('/repo', require('./repo').routes());
