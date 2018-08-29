@@ -60,20 +60,27 @@ exports.startExecution = async function startExecution(
     const isForGitHubApp = installationId != null;
     const { owner, repo } = util.parseRepoId(repoConfig.id);
 
+    // Download the repo's CBuildCI yaml file from the commit.
     ctx.logInfo(`Getting ${ctx.ciApp.buildsYmlFile} for commit ${commitSHA}...`);
-    const ymlContent = await github.getFileContent(
-        ctx.ciApp.githubApiUrl,
-        token,
-        owner,
-        repo,
-        commitSHA,
-        ctx.ciApp.buildsYmlFile,
-        {
-            maxSize: 65536,
-        }
-    );
+    let ymlContent;
+    try {
+        ymlContent = await github.getFileContent(
+            ctx.ciApp.githubApiUrl,
+            token,
+            owner,
+            repo,
+            commitSHA,
+            ctx.ciApp.buildsYmlFile,
+            {
+                maxSize: 65536,
+            }
+        );
+    }
+    catch (err) {
+        ctx.throw(400, `${ctx.ciApp.buildsYmlFile} is missing: ${err.message}`);
+    }
 
-    // Parse the repo builds YAML file.
+    // Parse the repo's CBuildCI yaml file.
     let ymlConfig = null;
     try {
         ymlConfig = yaml.safeLoad(ymlContent);
@@ -104,6 +111,25 @@ exports.startExecution = async function startExecution(
         ctx.throw(400, `${ctx.ciApp.buildsYmlFile} is invalid: ${err.message}`);
     }
 
+    // Fetch the metadata for the commit from GitHub.
+    ctx.logInfo(`Getting metadata for commit ${commitSHA}...`);
+    const commitResponse = await github.getCommit(
+        ctx.ciApp.githubApiUrl,
+        token,
+        owner,
+        repo,
+        commitSHA,
+    );
+
+    // Fail if the metadata could not be fetched.
+    if (commitResponse.statusCode !== 200) {
+        ctx.logError(`Failed to get commit metadata:\n[${commitResponse.statusCode}] ${JSON.stringify(commitResponse.data, null, 2)}`);
+        ctx.throw(500, 'Failed to get commit metadata');
+    }
+
+    // Compose the builds from the global defaults and
+    // the defaults in the repo's CBuildCI yaml file,
+    // and then validate the result.
     const builds = {};
     try {
         for (const [buildKey, ymlBuild] of Object.entries(ymlConfig.builds)) {
@@ -127,6 +153,7 @@ exports.startExecution = async function startExecution(
                 }),
             };
 
+            // Fail if a build references a CodeBuild project ARN that is not in the whitelist.
             const codeBuildProjectArn = builds[buildKey].buildParams.codeBuildProjectArn;
             if (!repoConfig.codeBuildProjectArns.includes(codeBuildProjectArn)) {
                 throw new Error(`"${codeBuildProjectArn}" is not a whitelisted CodeBuild project arn for ${repoConfig.id}`);
@@ -154,6 +181,7 @@ exports.startExecution = async function startExecution(
         ctx.throw(400, `${ctx.ciApp.buildsYmlFile} is invalid: ${err.message}`);
     }
 
+    // Check for cyclic dependencies.
     try {
         schema.checkBuildDependencies(
             Object.entries(builds).reduce((ret, [buildKey, buildState]) => {
@@ -236,6 +264,7 @@ exports.startExecution = async function startExecution(
         commitSHA,
     );
 
+    // Obtain a lock on executions for the commit.
     ctx.logInfo(`Attempting to secure lock for "${lockId}"...`);
     try {
         const prevLock = await aws.attemptLock(
@@ -261,6 +290,7 @@ exports.startExecution = async function startExecution(
         }
     }
 
+    // Determine the next execution ID for the commit.
     ctx.logInfo(`Determining next execution ID for commit "${commitSHA}" for "${state.repoId}"...`);
     state.executionId = await aws.getNextExecutionId(
         ctx.ciApp.tableExecutionsName,
@@ -274,6 +304,42 @@ exports.startExecution = async function startExecution(
         ctx.throw(500, `Invalid executionId: ${state.executionId}`);
     }
 
+    let author;
+    let committer;
+
+    if (commitResponse.data.author) {
+        author = {
+            id: commitResponse.data.author.id,
+            login: commitResponse.data.author.login,
+            type: commitResponse.data.author.type,
+        };
+    }
+
+    if (commitResponse.data.commit.author) {
+        author = {
+            ...author || {},
+            name: commitResponse.data.commit.author.name,
+            email: commitResponse.data.commit.author.email,
+        };
+    }
+
+    if (commitResponse.data.committer) {
+        committer = {
+            id: commitResponse.data.committer.id,
+            login: commitResponse.data.committer.login,
+            type: commitResponse.data.committer.type,
+        };
+    }
+
+    if (commitResponse.data.commit.committer) {
+        committer = {
+            ...committer || {},
+            name: commitResponse.data.commit.committer.name,
+            email: commitResponse.data.commit.committer.email,
+        };
+    }
+
+    // Create the execution record in the database.
     ctx.logInfo(`Creating execution table item "${state.executionId}" for "${state.repoId}"...`);
     await aws.createExecution(
         ctx.ciApp.tableExecutionsName,
@@ -281,14 +347,25 @@ exports.startExecution = async function startExecution(
         state.executionId,
         {
             installationId: state.installationId,
+            webhookTraceId: state.traceId,
             githubOwner,
             githubRepo,
             event,
-            webhookTraceId: state.traceId,
+            commit: {
+                author,
+                committer,
+                message: clipCommitMessage(commitResponse.data.commit.message),
+                stats: {
+                    additions: commitResponse.data.stats.additions,
+                    deletions: commitResponse.data.stats.deletions,
+                    total: commitResponse.data.stats.total,
+                },
+            },
         },
         state,
     );
 
+    // Create a GitHub "Checks Run" for the commit, if supported.
     if (isForGitHubApp && ctx.ciApp.githubUseChecks) {
         ctx.logInfo(`Creating check run "${state.checksName}"...`);
         const { commit, executionNum } = util.parseExecutionId(state.executionId);
@@ -322,6 +399,7 @@ exports.startExecution = async function startExecution(
         }
     }
 
+    // Start a AWS step function that will orchestrate this execution of builds.
     const execResult = await aws.startStepFunctionExecution({
         stateMachineArn: ctx.ciApp.stateMachineArn,
         input: JSON.stringify(state),
@@ -329,6 +407,7 @@ exports.startExecution = async function startExecution(
 
     ctx.logInfo(`State machine executed ARN:${execResult.executionArn}`);
 
+    // Add the step function ARN to the execution record in the database.
     await aws.updateExecution(
         ctx.ciApp.tableExecutionsName,
         state.repoId,
@@ -352,3 +431,15 @@ exports.startExecution = async function startExecution(
         traceId: state.traceId,
     };
 };
+
+function clipCommitMessage(message) {
+    if (typeof message !== 'string') {
+        return '';
+    }
+
+    // Remove any leading whitespace.
+    message = message.replace(/^\s+/, '');
+
+    const newlineIndex = message.indexOf('\n');
+    return message.substr(0, Math.min(101, newlineIndex >= 0 ? newlineIndex : 101));
+}
