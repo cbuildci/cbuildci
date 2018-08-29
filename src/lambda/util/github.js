@@ -120,6 +120,21 @@ exports.getRepository = async function getRepository(
     );
 };
 
+exports.getCommit = async function getCommit(
+    githubApiUrl,
+    token,
+    owner,
+    repo,
+    commit,
+) {
+    return await apiRequest(
+        githubApiUrl,
+        token,
+        'GET',
+        `/repos/${owner}/${repo}/commits/${commit}`,
+    );
+};
+
 exports.getPullRequest = async function getPullRequest(
     githubApiUrl,
     token,
