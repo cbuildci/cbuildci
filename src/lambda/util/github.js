@@ -141,12 +141,18 @@ exports.getPullRequestCommits = async function getPullRequestCommits(
     owner,
     repo,
     number,
+    { page = 1 } = {},
 ) {
     return await apiRequest(
         githubApiUrl,
         token,
         'GET',
         `/repos/${owner}/${repo}/pulls/${number}/commits`,
+        {
+            query: {
+                page,
+            },
+        }
     );
 };
 
