@@ -238,17 +238,17 @@ async function executionHandler(state, ciApp, traceId) {
     if (runningBuildArns.length) {
         // Get the current status of the CodeBuild builds.
         const endedBuilds = [];
-        const codeBuildStatuses = await aws.getBatchBuildStatus(
+        const batchGetResult = await aws.batchGetCodeBuilds(
             runningBuildArns.map((arn) => aws.parseArn(arn).buildId),
         );
 
         // Check for builds that should exist but their statuses weren't returned.
         const missingBuildArns = new Set(runningBuildArns);
-        for (const codeBuildStatus of codeBuildStatuses) {
+        for (const codeBuildStatus of batchGetResult.builds) {
             missingBuildArns.delete(codeBuildStatus.arn);
 
             const buildState = buildArnToStateMap[codeBuildStatus.arn];
-            buildState.codeBuild = getCodeBuildProps(codeBuildStatus);
+            buildState.codeBuild = codeBuildStatus;
             buildState.status = buildState.codeBuild.buildStatus;
 
             // Collect builds that are no longer running.
@@ -491,7 +491,7 @@ async function executionHandler(state, ciApp, traceId) {
         }
 
         ciApp.logInfo('Starting build...');
-        const buildResponse = await aws.startCodeBuild({
+        const startResult = await aws.startCodeBuild({
             // Parse the buildId from the CodeBuild project ARN.
             projectName: aws.parseArn(buildState.buildParams.codeBuildProjectArn).buildId,
 
@@ -539,9 +539,9 @@ async function executionHandler(state, ciApp, traceId) {
             },
         });
 
-        buildState.status = buildResponse.build.buildStatus;
-        buildState.codeBuild = getCodeBuildProps(buildResponse.build);
-        ciApp.logInfo(`Started build: ${buildResponse.build.arn}`);
+        buildState.status = startResult.build.buildStatus;
+        buildState.codeBuild = startResult.build;
+        ciApp.logInfo(`Started build: ${startResult.build.arn}`);
 
         await pushCommitStatus(buildState);
     }
@@ -646,32 +646,6 @@ function getExecutionSummary(state) {
     parts.push(buildsTable);
 
     return parts.join('\n');
-}
-
-function getCodeBuildProps(build) {
-    return {
-        id: build.id,
-        arn: build.arn,
-        startTime: util.toISODateString(build.startTime),
-        endTime: util.toISODateString(build.endTime),
-        currentPhase: build.currentPhase,
-        buildStatus: build.buildStatus,
-        buildComplete: build.buildComplete,
-        logs: build.logs,
-        phases: build.phases && build.phases.map((phase) => ({
-            phaseType: phase.phaseType,
-            phaseStatus: phase.phaseStatus,
-            startTime: util.toISODateString(phase.startTime),
-            endTime: util.toISODateString(phase.endTime),
-            durationInSeconds: phase.durationInSeconds,
-            contexts: phase.contexts && phase.contexts
-                .filter((context) => context.statusCode)
-                .map((context) => ({
-                    statusCode: context.statusCode,
-                    message: context.message,
-                })),
-        })),
-    };
 }
 
 async function prepareGitHubSource(inFileName, outFileName) {

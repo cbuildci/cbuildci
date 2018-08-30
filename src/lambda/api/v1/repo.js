@@ -271,10 +271,10 @@ module.exports = koaRouter({
         }
 
         const codeBuildStatus = build.codeBuild && (
-            await aws.getBatchBuildStatus(
+            await aws.batchGetCodeBuilds(
                 [aws.parseArn(build.codeBuild.arn).buildId],
             )
-        )[0];
+        ).builds[0];
 
         if (!codeBuildStatus) {
             ctx.throw(404, 'Build has not yet started');

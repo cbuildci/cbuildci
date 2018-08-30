@@ -18,6 +18,13 @@ const util = require('../../common/util');
 
 const AWS_REGION = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || 'us-east-1';
 
+/**
+ * Put a file into S3.
+ *
+ * @param {object} params
+ * @param {object} [serviceParams]
+ * @returns {Promise<object>}
+ */
 exports.putS3Object = async function putS3Object(params, serviceParams = {}) {
     const s3 = new AWS.S3({
         apiVersion: '2006-03-01',
@@ -25,9 +32,18 @@ exports.putS3Object = async function putS3Object(params, serviceParams = {}) {
         ...serviceParams,
     });
 
-    return await s3.putObject(params).promise();
+    await s3.putObject(params).promise();
+
+    return {};
 };
 
+/**
+ * Start a CodeBuild execution.
+ *
+ * @param {object} params
+ * @param {object} [serviceParams]
+ * @returns {Promise<{ build: CodeBuildProps }>}
+ */
 exports.startCodeBuild = async function startCodeBuild(params, serviceParams = {}) {
     const codebuild = new AWS.CodeBuild({
         apiVersion: '2016-10-06',
@@ -35,7 +51,11 @@ exports.startCodeBuild = async function startCodeBuild(params, serviceParams = {
         ...serviceParams,
     });
 
-    return await codebuild.startBuild(params).promise();
+    const response = await codebuild.startBuild(params).promise();
+
+    return {
+        build: normalizeCodeBuildProps(response.build),
+    };
 };
 
 exports.stopCodeBuild = async function stopCodeBuild(id, serviceParams = {}) {
@@ -45,39 +65,27 @@ exports.stopCodeBuild = async function stopCodeBuild(id, serviceParams = {}) {
         ...serviceParams,
     });
 
-    return await codebuild.stopBuild({
+    await codebuild.stopBuild({
         id,
     }).promise();
+
+    return {};
 };
 
-exports.getBuildStatus = async function getBuildStatus(buildId, serviceParams = {}) {
+exports.batchGetCodeBuilds = async function batchGetCodeBuilds(buildIds, serviceParams = {}) {
     const codebuild = new AWS.CodeBuild({
         apiVersion: '2016-10-06',
         region: AWS_REGION,
         ...serviceParams,
     });
 
-    const data = await codebuild.batchGetBuilds({
-        ids: [buildId],
-    }).promise();
-
-    return data.builds.length
-        ? data.builds[0].buildStatus
-        : null;
-};
-
-exports.getBatchBuildStatus = async function getBatchBuildStatus(buildIds, serviceParams = {}) {
-    const codebuild = new AWS.CodeBuild({
-        apiVersion: '2016-10-06',
-        region: AWS_REGION,
-        ...serviceParams,
-    });
-
-    const data = await codebuild.batchGetBuilds({
+    const response = await codebuild.batchGetBuilds({
         ids: buildIds,
     }).promise();
 
-    return data.builds;
+    return {
+        builds: response.builds.map(normalizeCodeBuildProps),
+    };
 };
 
 exports.startStepFunctionExecution = async function startStepFunctionExecution(params, serviceParams = {}) {
@@ -87,7 +95,11 @@ exports.startStepFunctionExecution = async function startStepFunctionExecution(p
         ...serviceParams,
     });
 
-    return await stepFunctions.startExecution(params).promise();
+    const response = await stepFunctions.startExecution(params).promise();
+
+    return {
+        executionArn: response.executionArn,
+    };
 };
 
 exports.getLogEvents = async function getLogEvents(
@@ -684,3 +696,47 @@ exports.parseArn = function parseArn(arn) {
         throw new Error(`arn is invalid or not supported: ${arn}`);
     }
 };
+
+/**
+ * Normalize CodeBuild data.
+ *
+ * @param {object} build
+ * @returns {CodeBuildProps}
+ */
+function normalizeCodeBuildProps(build) {
+    /**
+     * @typedef {object} CodeBuildProps
+     * @property {string} id
+     * @property {string} arn
+     * @property {string} startTime
+     * @property {string|null} endTime
+     * @property {string} currentPhase
+     * @property {string} buildStatus
+     * @property {boolean} buildComplete
+     * @property {object|undefined} logs
+     * @property {object[]|undefined} phases
+     */
+    return {
+        id: build.id,
+        arn: build.arn,
+        startTime: util.toISODateString(build.startTime),
+        endTime: util.toISODateString(build.endTime),
+        currentPhase: build.currentPhase,
+        buildStatus: build.buildStatus,
+        buildComplete: build.buildComplete,
+        logs: build.logs,
+        phases: build.phases && build.phases.map((phase) => ({
+            phaseType: phase.phaseType,
+            phaseStatus: phase.phaseStatus,
+            startTime: util.toISODateString(phase.startTime),
+            endTime: util.toISODateString(phase.endTime),
+            durationInSeconds: phase.durationInSeconds,
+            contexts: phase.contexts && phase.contexts
+                .filter((context) => context.statusCode)
+                .map((context) => ({
+                    statusCode: context.statusCode,
+                    message: context.message,
+                })),
+        })),
+    };
+}
