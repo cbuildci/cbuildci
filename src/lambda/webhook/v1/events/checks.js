@@ -115,7 +115,9 @@ module.exports = async function handleCheckEvent(ctx, gitHubEventType, ghEvent, 
             };
 
         await webhookUtil.startExecution(
-            ctx,
+            ctx.ciApp,
+            ctx.throw,
+            ctx.req.traceId,
             token,
             tokenExpiration,
             repoConfig,

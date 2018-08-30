@@ -121,7 +121,9 @@ module.exports = async function handlePullRequestEvent(ctx, ghEvent, repoConfig)
     }
 
     await webhookUtil.startExecution(
-        ctx,
+        ctx.ciApp,
+        ctx.throw,
+        ctx.req.traceId,
         token,
         tokenExpiration,
         repoConfig,
