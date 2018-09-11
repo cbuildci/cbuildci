@@ -1,5 +1,7 @@
 'use strict';
 
+const url = require('url');
+
 class CIApp {
     constructor({
         lockTimeoutSeconds,
@@ -37,6 +39,7 @@ class CIApp {
         this.stateMachineArn = stateMachineArn;
         this.secretsKMSArn = secretsKMSArn;
         this.githubUrl = githubUrl;
+        this.githubHost = url.parse(githubUrl).host;
         this.githubApiUrl = githubApiUrl;
         this.githubAppId = githubAppId;
         this.githubAppClientId = githubAppClientId;
