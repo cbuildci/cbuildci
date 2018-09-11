@@ -419,17 +419,17 @@ async function executionHandler(state, ciApp, traceId) {
         await pushCommitStatus(buildState);
 
         const sourceS3KeyPrefix = buildState.buildParams.sourceS3KeyPrefix
-            .replace('{GitHubDomain}', url.parse(ciApp.githubUrl).host)
+            .replace('{GitHubDomain}', ciApp.githubHost)
             .replace('{GitHubUser}', state.owner)
             .replace('{GitHubRepo}', state.repo);
 
         const artifactS3KeyPrefix = !buildState.buildParams.noArtifacts && buildState.buildParams.artifactS3KeyPrefix
-            .replace('{GitHubDomain}', url.parse(ciApp.githubUrl).host)
+            .replace('{GitHubDomain}', ciApp.githubHost)
             .replace('{GitHubUser}', state.owner)
             .replace('{GitHubRepo}', state.repo);
 
         const cacheS3KeyPrefix = buildState.buildParams.useCache && buildState.buildParams.cacheS3KeyPrefix
-            .replace('{GitHubDomain}', url.parse(ciApp.githubUrl).host)
+            .replace('{GitHubDomain}', ciApp.githubHost)
             .replace('{GitHubUser}', state.owner)
             .replace('{GitHubRepo}', state.repo);
 
