@@ -24,6 +24,8 @@ describe('util', () => {
             'escapeRegExp',
             'convertToRegex',
             'cacheAsyncResult',
+            'toEpochTime',
+            'toISODateString',
         ].sort());
     });
 
@@ -449,6 +451,68 @@ describe('util', () => {
 
             expect(await fn('a')).to.equal('a2');
             expect(executions).to.equal(2);
+        });
+    });
+
+    describe('toEpochTime', () => {
+        it('should return epoch time for parsable dates', () => {
+            expect(util.toEpochTime(new Date(1536668197845)))
+                .to.equal(1536668197845);
+
+            expect(util.toEpochTime(-100000))
+                .to.equal(-100000);
+
+            expect(util.toEpochTime(0))
+                .to.equal(0);
+
+            expect(util.toEpochTime(1536668197845))
+                .to.equal(1536668197845);
+
+            expect(util.toEpochTime('2018-09-11T12:16:37.845Z'))
+                .to.equal(1536668197845);
+        });
+
+        it('should return null if invalid date', () => {
+            expect(util.toEpochTime(undefined)).to.equal(null);
+            expect(util.toEpochTime(null)).to.equal(null);
+            expect(util.toEpochTime(false)).to.equal(null);
+            expect(util.toEpochTime('')).to.equal(null);
+            expect(util.toEpochTime(Infinity)).to.equal(null);
+            expect(util.toEpochTime(-Infinity)).to.equal(null);
+            expect(util.toEpochTime(NaN)).to.equal(null);
+            expect(util.toEpochTime({})).to.equal(null);
+            expect(util.toEpochTime([])).to.equal(null);
+        });
+    });
+
+    describe('toISODateString', () => {
+        it('should return epoch time for parsable dates', () => {
+            expect(util.toISODateString(new Date(1536668197845)))
+                .to.equal('2018-09-11T12:16:37.845Z');
+
+            expect(util.toISODateString(-100000))
+                .to.equal('1969-12-31T23:58:20.000Z');
+
+            expect(util.toISODateString(0))
+                .to.equal('1970-01-01T00:00:00.000Z');
+
+            expect(util.toISODateString(1536668197845))
+                .to.equal('2018-09-11T12:16:37.845Z');
+
+            expect(util.toISODateString('2018-09-11T12:16:37.845Z'))
+                .to.equal('2018-09-11T12:16:37.845Z');
+        });
+
+        it('should return null if invalid date', () => {
+            expect(util.toISODateString(undefined)).to.equal(null);
+            expect(util.toISODateString(null)).to.equal(null);
+            expect(util.toISODateString(false)).to.equal(null);
+            expect(util.toISODateString('')).to.equal(null);
+            expect(util.toISODateString(Infinity)).to.equal(null);
+            expect(util.toISODateString(-Infinity)).to.equal(null);
+            expect(util.toISODateString(NaN)).to.equal(null);
+            expect(util.toISODateString({})).to.equal(null);
+            expect(util.toISODateString([])).to.equal(null);
         });
     });
 });

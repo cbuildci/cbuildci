@@ -399,8 +399,12 @@ describe('schema', () => {
                 // branches: undefined,
                 sourceS3Bucket: 'foosource',
                 sourceS3KeyPrefix: '',
+                noArtifacts: false,
                 // artifactS3Bucket: undefined,
                 artifactS3KeyPrefix: '',
+                useCache: false,
+                // cacheS3Bucket: undefined,
+                cacheS3KeyPrefix: '',
             });
         });
 
@@ -997,6 +1001,40 @@ describe('schema', () => {
                 .to.not.throw();
         });
 
+        it('should throw error if "noArtifacts" is invalid', () => {
+            expect(() => schema.validateBuildParams({
+                codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
+                image: 'foobar',
+                sourceS3Bucket: 'foosource',
+                noArtifacts: null,
+            }))
+                .to.throw('noArtifacts must be a boolean');
+
+            expect(() => schema.validateBuildParams({
+                codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
+                image: 'foobar',
+                sourceS3Bucket: 'foosource',
+                noArtifacts: '',
+            }))
+                .to.throw('noArtifacts must be a boolean');
+
+            expect(() => schema.validateBuildParams({
+                codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
+                image: 'foobar',
+                sourceS3Bucket: 'foosource',
+                noArtifacts: 'foobar',
+            }))
+                .to.throw('noArtifacts must be a boolean');
+
+            expect(() => schema.validateBuildParams({
+                codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
+                image: 'foobar',
+                sourceS3Bucket: 'foosource',
+                noArtifacts: true,
+            }))
+                .to.not.throw();
+        });
+
         it('should throw error if "artifactS3Bucket" is invalid', () => {
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
@@ -1053,6 +1091,100 @@ describe('schema', () => {
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 artifactS3KeyPrefix: 'foobar',
+            }))
+                .to.not.throw();
+        });
+
+        it('should throw error if "useCache" is invalid', () => {
+            expect(() => schema.validateBuildParams({
+                codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
+                image: 'foobar',
+                sourceS3Bucket: 'foosource',
+                useCache: null,
+            }))
+                .to.throw('useCache must be a boolean');
+
+            expect(() => schema.validateBuildParams({
+                codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
+                image: 'foobar',
+                sourceS3Bucket: 'foosource',
+                useCache: '',
+            }))
+                .to.throw('useCache must be a boolean');
+
+            expect(() => schema.validateBuildParams({
+                codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
+                image: 'foobar',
+                sourceS3Bucket: 'foosource',
+                useCache: 'foobar',
+            }))
+                .to.throw('useCache must be a boolean');
+
+            expect(() => schema.validateBuildParams({
+                codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
+                image: 'foobar',
+                sourceS3Bucket: 'foosource',
+                useCache: true,
+            }))
+                .to.not.throw();
+        });
+
+        it('should throw error if "cacheS3Bucket" is invalid', () => {
+            expect(() => schema.validateBuildParams({
+                codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
+                image: 'foobar',
+                sourceS3Bucket: 'foosource',
+                cacheS3Bucket: '',
+            }))
+                .to.throw('cacheS3Bucket must have a length of at least 1');
+
+            expect(() => schema.validateBuildParams({
+                codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
+                image: 'foobar',
+                sourceS3Bucket: 'foosource',
+                cacheS3Bucket: 'foobar',
+            }))
+                .to.not.throw();
+        });
+
+        it('should throw error if "cacheS3KeyPrefix" is invalid', () => {
+            expect(() => schema.validateBuildParams({
+                codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
+                image: 'foobar',
+                sourceS3Bucket: 'foosource',
+                cacheS3KeyPrefix: '/',
+            }))
+                .to.throw('cacheS3KeyPrefix must not start with "/"');
+
+            expect(() => schema.validateBuildParams({
+                codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
+                image: 'foobar',
+                sourceS3Bucket: 'foosource',
+                cacheS3KeyPrefix: null,
+            }))
+                .to.throw('cacheS3KeyPrefix must have a value');
+
+            expect(() => schema.validateBuildParams({
+                codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
+                image: 'foobar',
+                sourceS3Bucket: 'foosource',
+                cacheS3KeyPrefix: false,
+            }))
+                .to.throw('cacheS3KeyPrefix must be a string');
+
+            expect(() => schema.validateBuildParams({
+                codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
+                image: 'foobar',
+                sourceS3Bucket: 'foosource',
+                cacheS3KeyPrefix: '',
+            }))
+                .to.not.throw();
+
+            expect(() => schema.validateBuildParams({
+                codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
+                image: 'foobar',
+                sourceS3Bucket: 'foosource',
+                cacheS3KeyPrefix: 'foobar',
             }))
                 .to.not.throw();
         });
