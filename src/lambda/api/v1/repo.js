@@ -270,14 +270,12 @@ module.exports = koaRouter({
             ctx.throw(404, 'Build not found for execution');
         }
 
-        const codeBuildStatus = build.codeBuild && (
-            await aws.batchGetCodeBuilds(
-                [aws.parseArn(build.codeBuild.arn).buildId],
-            )
-        ).builds[0];
-
-        if (!codeBuildStatus) {
+        if (!build.codeBuild) {
             ctx.throw(404, 'Build has not yet started');
+        }
+
+        if (!build.codeBuild.logs || !build.codeBuild.logs.streamName) {
+            ctx.throw(404, 'Build does not yet have logs');
         }
 
         const logResponse = await aws.getLogEvents(
