@@ -4,6 +4,8 @@ const url = require('url');
 const jwt = require('jsonwebtoken');
 const { request } = require('./request');
 
+const USER_AGENT = 'CBuildCI https://github.com/cbuildci/cbuildci';
+
 exports.parseGitHubUrl = function parseGitHubUrl(githubUrl) {
     const parsed = url.parse(githubUrl);
     return {
@@ -60,39 +62,18 @@ exports.getInstallationAccessToken = async function getInstallationAccessToken(
             : appPrivateKey
     );
 
-    const headers = {
-        Accept: 'application/vnd.github.machine-man-preview+json',
-        Authorization: `Bearer ${jwt}`,
-        'User-Agent': 'CBuildCI https://github.com/cbuildci/cbuildci',
-    };
-
-    const urlOpts = {
-        ...parsedUrl,
-        pathname: `${parsedUrl.pathname}/installations/${installationId}/access_tokens`,
-    };
-
-    const response = await request(
+    const response = await apiRequest(
+        githubApiUrl,
+        jwt,
         'POST',
-        url.format(urlOpts),
-        null,
+        `/installations/${installationId}/access_tokens`,
         {
-            headers,
-        },
+            authType: 'Bearer',
+        }
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-        let responseBody;
-
-        try {
-            responseBody = Buffer.isBuffer(response.data)
-                ? response.data.toString('utf8')
-                : JSON.stringify(response.data, null, 2);
-        }
-        catch (err) {
-            responseBody = '';
-        }
-
-        throw new Error(`Failed to get installation access token (code:${response.statusCode})${responseBody ? `\n${responseBody}` : ''}`);
+        throw getApiFailureError(response, 'Failed to get installation access token');
     }
 
     if (!response.data || !response.data.token) {
@@ -212,18 +193,7 @@ exports.getFileContent = async function getFileContent(
             : response.data.content;
     }
     else {
-        let responseBody;
-
-        try {
-            responseBody = Buffer.isBuffer(response.data)
-                ? response.data.toString('utf8')
-                : JSON.stringify(response.data, null, 2);
-        }
-        catch (err) {
-            responseBody = '';
-        }
-
-        throw new Error(`Did not return 200: ${response.statusCode}${responseBody ? `\n${responseBody}` : ''}`);
+        throw getApiFailureError(response, 'Did not return 200');
     }
 };
 
@@ -498,13 +468,46 @@ function createJWT(appId, privateKey, expirationMinutes = 10) {
     }, privateKey, { algorithm: 'RS256' });
 }
 
+/**
+ * Build an Error instance for a bad API response.
+ *
+ * @param {object} response
+ * @param {string} baseMessage
+ * @returns {Error}
+ */
+function getApiFailureError(response, baseMessage) {
+    let responseMessage;
+
+    try {
+        responseMessage = Buffer.isBuffer(response.data)
+            ? response.data.toString('utf8')
+            : JSON.stringify(response.data, null, 2);
+
+        if (responseMessage.length) {
+            responseMessage = `\n${responseMessage}`;
+        }
+    }
+    catch (err) {
+        responseMessage = ` (Failed to stringify response body: ${err.message})`;
+    }
+
+    return new Error(`${baseMessage} (code:${response.statusCode})${responseMessage}`);
+}
+
 exports.apiRequest = apiRequest;
 async function apiRequest(
     githubApiUrl,
-    token,
+    authCredentials,
     method,
     path,
-    { query = null, data = null, writeStream = null, raw = false, acceptBase = null } = {}
+    {
+        query = null,
+        data = null,
+        writeStream = null,
+        raw = false,
+        acceptBase = null,
+        authType = 'token',
+    } = {}
 ) {
     const parsedUrl = exports.parseGitHubUrl(githubApiUrl);
 
@@ -519,8 +522,8 @@ async function apiRequest(
 
     const headers = {
         Accept,
-        Authorization: `token ${token}`,
-        'User-Agent': 'CBuildCI https://github.com/cbuildci/cbuildci',
+        Authorization: `${authType} ${authCredentials}`,
+        'User-Agent': USER_AGENT,
     };
 
     const urlOpts = {
