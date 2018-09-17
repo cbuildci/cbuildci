@@ -5,6 +5,7 @@ const schema = require('../../../../common/schema');
 const aws = require('../../../util/aws');
 const github = require('../../../util/github');
 const webhookUtil = require('../util');
+const { startExecution } = require('../../../util/startExecution');
 
 /**
  * @param {object} ctx
@@ -120,7 +121,7 @@ module.exports = async function handlePullRequestEvent(ctx, ghEvent, repoConfig)
         }
     }
 
-    await webhookUtil.startExecution(
+    await startExecution(
         ctx.ciApp,
         ctx.throw,
         ctx.req.traceId,
