@@ -1,14 +1,11 @@
 'use strict';
 
-const chai = require('chai');
-const expect = chai.expect;
-
 const schema = require('../../../src/common/schema');
 
 describe('schema', () => {
 
     it('should have expected exports', () => {
-        expect(Object.keys(schema).sort()).to.deep.equal([
+        expect(Object.keys(schema).sort()).toEqual([
             'validateRepoConfig',
             'validateBuildsYml',
             'validateBuildParams',
@@ -19,61 +16,54 @@ describe('schema', () => {
     describe('validateRepoConfig', () => {
 
         it('should throw error if "id" is missing or invalid', () => {
-            expect(() => schema.validateRepoConfig({}))
-                .to.throw('id must have a value');
+            expect(() => schema.validateRepoConfig({})).toThrowError('id must have a value');
 
             expect(() => schema.validateRepoConfig({
                 id: null,
-            }))
-                .to.throw('id must have a value');
+            })).toThrowError('id must have a value');
 
             expect(() => schema.validateRepoConfig({
                 id: '',
-            }))
-                .to.throw('id must have a value');
+            })).toThrowError('id must have a value');
 
             expect(() => schema.validateRepoConfig({
                 id: 'foobar',
-            }))
-                .to.throw('id must be a valid repo ID');
+            })).toThrowError('id must be a valid repo ID');
         });
 
         it('should throw error if "codeBuildProjectArns" is missing or invalid', () => {
             expect(() => schema.validateRepoConfig({
                 id: 'repo/user',
-            }))
-                .to.throw('codeBuildProjectArns must have a value');
+            })).toThrowError('codeBuildProjectArns must have a value');
 
             expect(() => schema.validateRepoConfig({
                 id: 'repo/user',
                 codeBuildProjectArns: '',
-            }))
-                .to.throw('codeBuildProjectArns must have a value');
+            })).toThrowError('codeBuildProjectArns must have a value');
 
             expect(() => schema.validateRepoConfig({
                 id: 'repo/user',
                 codeBuildProjectArns: [],
-            }))
-                .to.throw('codeBuildProjectArns must not have a length less than 1');
+            })).toThrowError('codeBuildProjectArns must not have a length less than 1');
 
             expect(() => schema.validateRepoConfig({
                 id: 'repo/user',
                 codeBuildProjectArns: ['foobar'],
-            }))
-                .to.throw('codeBuildProjectArns.0 must match the pattern /^arn:aws:codebuild:[^:]+:[^:]+:project\\/.+$/');
+            })).toThrowError(
+                'codeBuildProjectArns.0 must match the pattern /^arn:aws:codebuild:[^:]+:[^:]+:project\\/.+$/'
+            );
         });
 
         it('should only require "id" and "codeBuildProjectArn" and have expected defaults for other props', () => {
             expect(() => schema.validateRepoConfig({
                 id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
 
             expect(schema.validateRepoConfig({
                 id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
-            })).to.deep.equal({
+            })).toEqual({
                 id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 // encryptedOAuthToken: undefined,
@@ -88,15 +78,13 @@ describe('schema', () => {
                 id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 encryptedWebhookSecret: '',
-            }))
-                .to.throw('encryptedWebhookSecret must have a length of at least 1');
+            })).toThrowError('encryptedWebhookSecret must have a length of at least 1');
 
             expect(() => schema.validateRepoConfig({
                 id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 encryptedWebhookSecret: 'fb',
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
 
         it('should throw error if encryptedOAuthToken is invalid', () => {
@@ -104,15 +92,13 @@ describe('schema', () => {
                 id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 encryptedOAuthToken: '',
-            }))
-                .to.throw('encryptedOAuthToken must have a length of at least 1');
+            })).toThrowError('encryptedOAuthToken must have a length of at least 1');
 
             expect(() => schema.validateRepoConfig({
                 id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 encryptedOAuthToken: 'fb',
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
 
         it('should throw error if waitSeconds is invalid', () => {
@@ -120,29 +106,25 @@ describe('schema', () => {
                 id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 waitSeconds: '',
-            }))
-                .to.throw('waitSeconds must be a number');
+            })).toThrowError('waitSeconds must be a number');
 
             expect(() => schema.validateRepoConfig({
                 id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 waitSeconds: 9,
-            }))
-                .to.throw('waitSeconds must not be less than 10');
+            })).toThrowError('waitSeconds must not be less than 10');
 
             expect(() => schema.validateRepoConfig({
                 id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 waitSeconds: 10.1,
-            }))
-                .to.throw('waitSeconds must be an integer');
+            })).toThrowError('waitSeconds must be an integer');
 
             expect(() => schema.validateRepoConfig({
                 id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 waitSeconds: 121,
-            }))
-                .to.throw('waitSeconds must not be greater than 120');
+            })).toThrowError('waitSeconds must not be greater than 120');
         });
 
         it('should throw error if buildDefaults is invalid', () => {
@@ -150,74 +132,62 @@ describe('schema', () => {
                 id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 buildDefaults: [],
-            }))
-                .to.throw('buildDefaults must be an object');
+            })).toThrowError('buildDefaults must be an object');
 
             expect(() => schema.validateRepoConfig({
                 id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 buildDefaults: false,
-            }))
-                .to.throw('buildDefaults must be an object');
+            })).toThrowError('buildDefaults must be an object');
 
             expect(() => schema.validateRepoConfig({
                 id: 'repo/user',
                 codeBuildProjectArns: ['arn:aws:codebuild:us-east-1:123456789012:project/foobar'],
                 buildDefaults: {},
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
     });
 
     describe('validateBuildsYml', () => {
         it('should throw error if "version" is missing or invalid', () => {
-            expect(() => schema.validateBuildsYml({}))
-                .to.throw('version must have a value');
+            expect(() => schema.validateBuildsYml({})).toThrowError('version must have a value');
 
             expect(() => schema.validateBuildsYml({
                 version: null,
-            }))
-                .to.throw('version must have a value');
+            })).toThrowError('version must have a value');
 
             expect(() => schema.validateBuildsYml({
                 version: '',
-            }))
-                .to.throw('version must have a value');
+            })).toThrowError('version must have a value');
 
             expect(() => schema.validateBuildsYml({
                 version: 'foobar',
-            }))
-                .to.throw('version must be a number');
+            })).toThrowError('version must be a number');
 
             expect(() => schema.validateBuildsYml({
                 version: 0,
-            }))
-                .to.throw('version must be one of the following values: 1');
+            })).toThrowError('version must be one of the following values: 1');
         });
 
         it('should throw error if "builds" is missing or invalid', () => {
             expect(() => schema.validateBuildsYml({
                 version: 1,
-            }))
-                .to.throw('builds must have a value');
+            })).toThrowError('builds must have a value');
 
             expect(() => schema.validateBuildsYml({
                 version: 1,
                 builds: null,
-            }))
-                .to.throw('builds must have a value');
+            })).toThrowError('builds must have a value');
 
             expect(() => schema.validateBuildsYml({
                 version: 1,
                 builds: 'foobar',
-            }))
-                .to.throw('builds must be an object');
+            })).toThrowError('builds must be an object');
 
             expect(() => schema.validateBuildsYml({
                 version: 1,
                 builds: {},
-            }))
-                .to.throw('builds must have at least 1 property');
+            })).toThrowError('builds must have at least 1 property');
         });
 
         it('should only require "version" and "builds" and have expected defaults for other props', () => {
@@ -226,15 +196,14 @@ describe('schema', () => {
                 builds: {
                     foobar: {},
                 },
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
 
             expect(schema.validateBuildsYml({
                 version: 1,
                 builds: {
                     foobar: {},
                 },
-            })).to.deep.equal({
+            })).toEqual({
                 version: 1,
                 checksName: 'CBuildCI',
                 defaults: {},
@@ -251,8 +220,7 @@ describe('schema', () => {
                 builds: {
                     foobar: {},
                 },
-            }))
-                .to.throw('checksName must be a string');
+            })).toThrowError('checksName must be a string');
 
             expect(() => schema.validateBuildsYml({
                 version: 1,
@@ -260,8 +228,7 @@ describe('schema', () => {
                 builds: {
                     foobar: {},
                 },
-            }))
-                .to.throw('checksName must have a value');
+            })).toThrowError('checksName must have a value');
 
             expect(() => schema.validateBuildsYml({
                 version: 1,
@@ -269,8 +236,7 @@ describe('schema', () => {
                 builds: {
                     foobar: {},
                 },
-            }))
-                .to.throw('checksName must have a length of at least 3');
+            })).toThrowError('checksName must have a length of at least 3');
 
             expect(() => schema.validateBuildsYml({
                 version: 1,
@@ -278,8 +244,7 @@ describe('schema', () => {
                 builds: {
                     foobar: {},
                 },
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
 
         it('should throw error if "defaults" is invalid', () => {
@@ -289,8 +254,7 @@ describe('schema', () => {
                 builds: {
                     foobar: {},
                 },
-            }))
-                .to.throw('defaults must be an object');
+            })).toThrowError('defaults must be an object');
 
             expect(() => schema.validateBuildsYml({
                 version: 1,
@@ -298,78 +262,68 @@ describe('schema', () => {
                 builds: {
                     foobar: {},
                 },
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
     });
 
     describe('validateBuildParams', () => {
         it('should throw error if "image" is missing or invalid', () => {
-            expect(() => schema.validateBuildParams({}))
-                .to.throw('codeBuildProjectArn must have a value');
+            expect(() => schema.validateBuildParams({})).toThrowError('codeBuildProjectArn must have a value');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: null,
-            }))
-                .to.throw('codeBuildProjectArn must have a value');
+            })).toThrowError('codeBuildProjectArn must have a value');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: '',
-            }))
-                .to.throw('codeBuildProjectArn must have a value');
+            })).toThrowError('codeBuildProjectArn must have a value');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'foobar',
-            }))
-                .to.throw('codeBuildProjectArn must match the pattern /^arn:aws:codebuild:[^:]+:[^:]+:project\\/.+$/');
+            })).toThrowError(
+                'codeBuildProjectArn must match the pattern /^arn:aws:codebuild:[^:]+:[^:]+:project\\/.+$/'
+            );
         });
 
         it('should throw error if "image" is missing or invalid', () => {
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
-            }))
-                .to.throw('image must have a value');
+            })).toThrowError('image must have a value');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: null,
-            }))
-                .to.throw('image must have a value');
+            })).toThrowError('image must have a value');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: '',
-            }))
-                .to.throw('image must have a value');
+            })).toThrowError('image must have a value');
         });
 
         it('should throw error if "sourceS3Bucket" is missing or invalid', () => {
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
-            }))
-                .to.throw('sourceS3Bucket must have a value');
+            })).toThrowError('sourceS3Bucket must have a value');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: null,
-            }))
-                .to.throw('sourceS3Bucket must have a value');
+            })).toThrowError('sourceS3Bucket must have a value');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: '',
-            }))
-                .to.throw('sourceS3Bucket must have a value');
+            })).toThrowError('sourceS3Bucket must have a value');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: '',
-            }))
-                .to.throw('sourceS3Bucket must have a value');
+            })).toThrowError('sourceS3Bucket must have a value');
         });
 
         it('should only require "image" and "sourceS3Bucket" and have expected defaults for other props', () => {
@@ -377,14 +331,13 @@ describe('schema', () => {
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
 
             expect(schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
-            })).to.deep.equal({
+            })).toEqual({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 // commitStatus: undefined,
@@ -414,16 +367,14 @@ describe('schema', () => {
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 commitStatus: 'fo',
-            }))
-                .to.throw('commitStatus must have a length of at least 3');
+            })).toThrowError('commitStatus must have a length of at least 3');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 commitStatus: 'foo',
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
 
         it('should throw error if "buildspec" is invalid', () => {
@@ -432,32 +383,28 @@ describe('schema', () => {
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 buildspec: null,
-            }))
-                .to.throw('buildspec must be a string');
+            })).toThrowError('buildspec must be a string');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 buildspec: '',
-            }))
-                .to.throw('buildspec must have a length of at least 1');
+            })).toThrowError('buildspec must have a length of at least 1');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 buildspec: true,
-            }))
-                .to.throw('buildspec must be a string');
+            })).toThrowError('buildspec must be a string');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 buildspec: 'f',
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
 
         it('should throw error if "computeType" is invalid', () => {
@@ -466,32 +413,28 @@ describe('schema', () => {
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 computeType: null,
-            }))
-                .to.throw('computeType must be a string');
+            })).toThrowError('computeType must be a string');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 computeType: '',
-            }))
-                .to.throw('computeType must have a length of at least 1');
+            })).toThrowError('computeType must have a length of at least 1');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 computeType: true,
-            }))
-                .to.throw('computeType must be a string');
+            })).toThrowError('computeType must be a string');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 computeType: 'f',
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
 
         it('should throw error if "environmentType" is invalid', () => {
@@ -500,32 +443,28 @@ describe('schema', () => {
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 environmentType: null,
-            }))
-                .to.throw('environmentType must be a string');
+            })).toThrowError('environmentType must be a string');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 environmentType: '',
-            }))
-                .to.throw('environmentType must have a length of at least 1');
+            })).toThrowError('environmentType must have a length of at least 1');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 environmentType: true,
-            }))
-                .to.throw('environmentType must be a string');
+            })).toThrowError('environmentType must be a string');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 environmentType: 'f',
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
 
         it('should throw error if "privilegedMode" is invalid', () => {
@@ -534,32 +473,28 @@ describe('schema', () => {
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 privilegedMode: null,
-            }))
-                .to.throw('privilegedMode must be a boolean');
+            })).toThrowError('privilegedMode must be a boolean');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 privilegedMode: '',
-            }))
-                .to.throw('privilegedMode must be a boolean');
+            })).toThrowError('privilegedMode must be a boolean');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 privilegedMode: 'foobar',
-            }))
-                .to.throw('privilegedMode must be a boolean');
+            })).toThrowError('privilegedMode must be a boolean');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 privilegedMode: true,
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
 
         it('should throw error if "timeoutInMinutes" is invalid', () => {
@@ -568,56 +503,49 @@ describe('schema', () => {
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 timeoutInMinutes: null,
-            }))
-                .to.throw('timeoutInMinutes must be a number');
+            })).toThrowError('timeoutInMinutes must be a number');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 timeoutInMinutes: '',
-            }))
-                .to.throw('timeoutInMinutes must be a number');
+            })).toThrowError('timeoutInMinutes must be a number');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 timeoutInMinutes: 'foobar',
-            }))
-                .to.throw('timeoutInMinutes must be a number');
+            })).toThrowError('timeoutInMinutes must be a number');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 timeoutInMinutes: 4,
-            }))
-                .to.throw('timeoutInMinutes must not be less than 5');
+            })).toThrowError('timeoutInMinutes must not be less than 5');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 timeoutInMinutes: 481,
-            }))
-                .to.throw('timeoutInMinutes must not be greater than 480');
+            })).toThrowError('timeoutInMinutes must not be greater than 480');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 timeoutInMinutes: 5,
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 timeoutInMinutes: 480,
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
 
         it('should throw error if "stopIfNotBranchHead" is invalid', () => {
@@ -626,32 +554,28 @@ describe('schema', () => {
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 stopIfNotBranchHead: null,
-            }))
-                .to.throw('stopIfNotBranchHead must be a boolean');
+            })).toThrowError('stopIfNotBranchHead must be a boolean');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 stopIfNotBranchHead: '',
-            }))
-                .to.throw('stopIfNotBranchHead must be a boolean');
+            })).toThrowError('stopIfNotBranchHead must be a boolean');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 stopIfNotBranchHead: 'foobar',
-            }))
-                .to.throw('stopIfNotBranchHead must be a boolean');
+            })).toThrowError('stopIfNotBranchHead must be a boolean');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 stopIfNotBranchHead: true,
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
 
         it('should throw error if "dependsOn" is invalid', () => {
@@ -660,64 +584,56 @@ describe('schema', () => {
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 dependsOn: null,
-            }))
-                .to.throw('dependsOn must be an array');
+            })).toThrowError('dependsOn must be an array');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 dependsOn: {},
-            }))
-                .to.throw('dependsOn must be an array');
+            })).toThrowError('dependsOn must be an array');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 dependsOn: 'foobar',
-            }))
-                .to.throw('dependsOn must be an array');
+            })).toThrowError('dependsOn must be an array');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 dependsOn: [],
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 dependsOn: [null],
-            }))
-                .to.throw('dependsOn.0 must have a value');
+            })).toThrowError('dependsOn.0 must have a value');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 dependsOn: [''],
-            }))
-                .to.throw('dependsOn.0 must have a value');
+            })).toThrowError('dependsOn.0 must have a value');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 dependsOn: [false],
-            }))
-                .to.throw('dependsOn.0 must be a string');
+            })).toThrowError('dependsOn.0 must be a string');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 dependsOn: ['foobar', 'barfoo'],
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
 
         it('should throw error if "environmentVariables" is invalid', () => {
@@ -726,32 +642,28 @@ describe('schema', () => {
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 environmentVariables: null,
-            }))
-                .to.throw('environmentVariables must be an array');
+            })).toThrowError('environmentVariables must be an array');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 environmentVariables: 'foobar',
-            }))
-                .to.throw('environmentVariables must be an array');
+            })).toThrowError('environmentVariables must be an array');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 environmentVariables: false,
-            }))
-                .to.throw('environmentVariables must be an array');
+            })).toThrowError('environmentVariables must be an array');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 environmentVariables: [],
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
@@ -760,8 +672,7 @@ describe('schema', () => {
                 environmentVariables: [
                     null,
                 ],
-            }))
-                .to.throw('environmentVariables.0 must have a value');
+            })).toThrowError('environmentVariables.0 must have a value');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
@@ -770,8 +681,7 @@ describe('schema', () => {
                 environmentVariables: [
                     'foobar',
                 ],
-            }))
-                .to.throw('environmentVariables.0 must be an object');
+            })).toThrowError('environmentVariables.0 must be an object');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
@@ -780,8 +690,7 @@ describe('schema', () => {
                 environmentVariables: [
                     {},
                 ],
-            }))
-                .to.throw('environmentVariables.0.name must have a value');
+            })).toThrowError('environmentVariables.0.name must have a value');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
@@ -792,8 +701,7 @@ describe('schema', () => {
                         name: false,
                     },
                 ],
-            }))
-                .to.throw('environmentVariables.0.name must be a string');
+            })).toThrowError('environmentVariables.0.name must be a string');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
@@ -804,8 +712,7 @@ describe('schema', () => {
                         name: 'foobar',
                     },
                 ],
-            }))
-                .to.throw('environmentVariables.0.value must have a value');
+            })).toThrowError('environmentVariables.0.value must have a value');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
@@ -817,8 +724,7 @@ describe('schema', () => {
                         value: false,
                     },
                 ],
-            }))
-                .to.throw('environmentVariables.0.value must be a string');
+            })).toThrowError('environmentVariables.0.value must be a string');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
@@ -830,8 +736,7 @@ describe('schema', () => {
                         value: 'barfoo',
                     },
                 ],
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
 
             // Cleans unsupported props.
             expect(schema.validateBuildParams({
@@ -845,8 +750,7 @@ describe('schema', () => {
                         foo: 'bar',
                     },
                 ],
-            }).environmentVariables)
-                .to.deep.equal([
+            }).environmentVariables).toEqual([
                     {
                         name: 'foobar',
                         value: 'barfoo',
@@ -864,8 +768,7 @@ describe('schema', () => {
                     },
                     {},
                 ],
-            }))
-                .to.throw('environmentVariables.1.name must have a value');
+            })).toThrowError('environmentVariables.1.name must have a value');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
@@ -881,8 +784,7 @@ describe('schema', () => {
                         value: 'barfoo',
                     },
                 ],
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
 
         it('should throw error if "branches" is invalid', () => {
@@ -891,72 +793,63 @@ describe('schema', () => {
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 branches: null,
-            }))
-                .to.throw('branches must be an array');
+            })).toThrowError('branches must be an array');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 branches: {},
-            }))
-                .to.throw('branches must be an array');
+            })).toThrowError('branches must be an array');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 branches: 'foobar',
-            }))
-                .to.throw('branches must be an array');
+            })).toThrowError('branches must be an array');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 branches: [],
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 branches: [null],
-            }))
-                .to.throw('branches.0 must have a value');
+            })).toThrowError('branches.0 must have a value');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 branches: [''],
-            }))
-                .to.throw('branches.0 must have a value');
+            })).toThrowError('branches.0 must have a value');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 branches: [false],
-            }))
-                .to.throw('branches.0 must be a string');
+            })).toThrowError('branches.0 must be a string');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 branches: ['/+/'],
-            }))
-                .to.throw('branches.0 is an invalid pattern');
+            })).toThrowError('branches.0 is an invalid pattern');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 branches: ['foobar', 'bar*foo', '/.+/'],
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
 
         it('should throw error if "sourceS3KeyPrefix" is invalid', () => {
@@ -965,40 +858,35 @@ describe('schema', () => {
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 sourceS3KeyPrefix: '/',
-            }))
-                .to.throw('sourceS3KeyPrefix must not start with "/"');
+            })).toThrowError('sourceS3KeyPrefix must not start with "/"');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 sourceS3KeyPrefix: null,
-            }))
-                .to.throw('sourceS3KeyPrefix must have a value');
+            })).toThrowError('sourceS3KeyPrefix must have a value');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 sourceS3KeyPrefix: false,
-            }))
-                .to.throw('sourceS3KeyPrefix must be a string');
+            })).toThrowError('sourceS3KeyPrefix must be a string');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 sourceS3KeyPrefix: '',
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 sourceS3KeyPrefix: 'foobar',
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
 
         it('should throw error if "noArtifacts" is invalid', () => {
@@ -1007,32 +895,28 @@ describe('schema', () => {
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 noArtifacts: null,
-            }))
-                .to.throw('noArtifacts must be a boolean');
+            })).toThrowError('noArtifacts must be a boolean');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 noArtifacts: '',
-            }))
-                .to.throw('noArtifacts must be a boolean');
+            })).toThrowError('noArtifacts must be a boolean');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 noArtifacts: 'foobar',
-            }))
-                .to.throw('noArtifacts must be a boolean');
+            })).toThrowError('noArtifacts must be a boolean');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 noArtifacts: true,
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
 
         it('should throw error if "artifactS3Bucket" is invalid', () => {
@@ -1041,16 +925,14 @@ describe('schema', () => {
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 artifactS3Bucket: '',
-            }))
-                .to.throw('artifactS3Bucket must have a length of at least 1');
+            })).toThrowError('artifactS3Bucket must have a length of at least 1');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 artifactS3Bucket: 'foobar',
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
 
         it('should throw error if "artifactS3KeyPrefix" is invalid', () => {
@@ -1059,40 +941,35 @@ describe('schema', () => {
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 artifactS3KeyPrefix: '/',
-            }))
-                .to.throw('artifactS3KeyPrefix must not start with "/"');
+            })).toThrowError('artifactS3KeyPrefix must not start with "/"');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 artifactS3KeyPrefix: null,
-            }))
-                .to.throw('artifactS3KeyPrefix must have a value');
+            })).toThrowError('artifactS3KeyPrefix must have a value');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 artifactS3KeyPrefix: false,
-            }))
-                .to.throw('artifactS3KeyPrefix must be a string');
+            })).toThrowError('artifactS3KeyPrefix must be a string');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 artifactS3KeyPrefix: '',
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 artifactS3KeyPrefix: 'foobar',
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
 
         it('should throw error if "useCache" is invalid', () => {
@@ -1101,32 +978,28 @@ describe('schema', () => {
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 useCache: null,
-            }))
-                .to.throw('useCache must be a boolean');
+            })).toThrowError('useCache must be a boolean');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 useCache: '',
-            }))
-                .to.throw('useCache must be a boolean');
+            })).toThrowError('useCache must be a boolean');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 useCache: 'foobar',
-            }))
-                .to.throw('useCache must be a boolean');
+            })).toThrowError('useCache must be a boolean');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 useCache: true,
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
 
         it('should throw error if "cacheS3Bucket" is invalid', () => {
@@ -1135,16 +1008,14 @@ describe('schema', () => {
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 cacheS3Bucket: '',
-            }))
-                .to.throw('cacheS3Bucket must have a length of at least 1');
+            })).toThrowError('cacheS3Bucket must have a length of at least 1');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 cacheS3Bucket: 'foobar',
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
 
         it('should throw error if "cacheS3KeyPrefix" is invalid', () => {
@@ -1153,40 +1024,35 @@ describe('schema', () => {
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 cacheS3KeyPrefix: '/',
-            }))
-                .to.throw('cacheS3KeyPrefix must not start with "/"');
+            })).toThrowError('cacheS3KeyPrefix must not start with "/"');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 cacheS3KeyPrefix: null,
-            }))
-                .to.throw('cacheS3KeyPrefix must have a value');
+            })).toThrowError('cacheS3KeyPrefix must have a value');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 cacheS3KeyPrefix: false,
-            }))
-                .to.throw('cacheS3KeyPrefix must be a string');
+            })).toThrowError('cacheS3KeyPrefix must be a string');
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 cacheS3KeyPrefix: '',
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
 
             expect(() => schema.validateBuildParams({
                 codeBuildProjectArn: 'arn:aws:codebuild:us-east-1:123456789012:project/foobar',
                 image: 'foobar',
                 sourceS3Bucket: 'foosource',
                 cacheS3KeyPrefix: 'foobar',
-            }))
-                .to.not.throw();
+            })).not.toThrowError();
         });
     });
 
@@ -1234,8 +1100,7 @@ describe('schema', () => {
                         ],
                     },
                 }),
-            ))
-                .to.not.throw();
+            )).not.toThrowError();
 
             expect(() => schema.checkBuildDependencies(
                 validateBuilds({
@@ -1269,8 +1134,7 @@ describe('schema', () => {
                         sourceS3Bucket: 'srcbucket',
                     },
                 }),
-            ))
-                .to.not.throw();
+            )).not.toThrowError();
 
             expect(() => schema.checkBuildDependencies(
                 validateBuilds({
@@ -1305,8 +1169,7 @@ describe('schema', () => {
                         ],
                     },
                 }),
-            ))
-                .to.not.throw();
+            )).not.toThrowError();
         });
 
         it('it should catch cyclic dependencies', () => {
@@ -1321,8 +1184,7 @@ describe('schema', () => {
                         ],
                     },
                 }),
-            ))
-                .to.throw('Build "first" cannot have a dependency to itself');
+            )).toThrowError('Build "first" cannot have a dependency to itself');
 
             expect(() => schema.checkBuildDependencies(
                 validateBuilds({
@@ -1335,8 +1197,7 @@ describe('schema', () => {
                         ],
                     },
                 }),
-            ))
-                .to.throw('Build "first" depends on "second" which does not exist');
+            )).toThrowError('Build "first" depends on "second" which does not exist');
 
             expect(() => schema.checkBuildDependencies(
                 validateBuilds({
@@ -1357,8 +1218,7 @@ describe('schema', () => {
                         ],
                     },
                 }),
-            ))
-                .to.throw('Builds "second" and "first" have a circular dependency');
+            )).toThrowError('Builds "second" and "first" have a circular dependency');
 
             expect(() => schema.checkBuildDependencies(
                 validateBuilds({
@@ -1387,8 +1247,7 @@ describe('schema', () => {
                         ],
                     },
                 }),
-            ))
-                .to.throw('Builds "third" and "second" have a circular dependency');
+            )).toThrowError('Builds "third" and "second" have a circular dependency');
 
             expect(() => schema.checkBuildDependencies(
                 validateBuilds({
@@ -1417,8 +1276,7 @@ describe('schema', () => {
                         ],
                     },
                 }),
-            ))
-                .to.throw('Builds "first" and "third" have a circular dependency');
+            )).toThrowError('Builds "first" and "third" have a circular dependency');
         });
     });
 });
