@@ -16,6 +16,41 @@ exports.parseGitHubUrl = function parseGitHubUrl(githubUrl) {
     };
 };
 
+exports.getRepositoryInstallation = async function getRepositoryInstallation(
+    githubAppId,
+    githubApiUrl,
+    appPrivateKey,
+    owner,
+    repo,
+) {
+    const jwt = createJWT(
+        githubAppId,
+        typeof appPrivateKey === 'function'
+            ? await appPrivateKey()
+            : appPrivateKey
+    );
+
+    const response = await apiRequest(
+        githubApiUrl,
+        jwt,
+        'GET',
+        `/repos/${owner}/${repo}/installation`,
+        {
+            authType: 'Bearer',
+        }
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw getApiFailureError(response, `Failed to get installation ID for ${owner}/${repo}`);
+    }
+
+    if (!response.data || response.data.id == null) {
+        throw new Error(`Failed to get installation ID for ${owner}/${repo} (${response.data ? 'missing ID' : 'no JSON data'})`);
+    }
+
+    return response.data;
+};
+
 exports.isTokenExpired = function isTokenExpired(expiresAt, bufferMS = 15000) {
     expiresAt = new Date(expiresAt);
 
