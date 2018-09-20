@@ -464,6 +464,7 @@ def create_template():
                                 )),
                             ],
                             Action = [
+                                ac_dynamodb.PutItem,
                                 ac_dynamodb.UpdateItem,
                                 ac_dynamodb.DeleteItem,
                             ],
@@ -483,6 +484,12 @@ def create_template():
                                     region = vAWSRegion,
                                     account = vAWSAccountId,
                                 )),
+                                Sub(ac_ssm.ARN(
+                                    resource = "parameter/${%s}"
+                                               % p_github_app_private_key_param_name.title,
+                                    region = vAWSRegion,
+                                    account = vAWSAccountId,
+                                )),
                             ],
                             Action = [
                                 ac_ssm.GetParameter,
@@ -495,12 +502,6 @@ def create_template():
                                 Sub(ac_ssm.ARN(
                                     resource = "parameter/${%s}"
                                                % p_github_webhook_secret_param_name.title,
-                                    region = vAWSRegion,
-                                    account = vAWSAccountId,
-                                )),
-                                Sub(ac_ssm.ARN(
-                                    resource = "parameter/${%s}"
-                                               % p_github_app_private_key_param_name.title,
                                     region = vAWSRegion,
                                     account = vAWSAccountId,
                                 )),
