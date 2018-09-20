@@ -120,7 +120,7 @@ module.exports = async function handleCheckEvent(ctx, gitHubEventType, ghEvent, 
                 expires_at: null,
             };
 
-        await startExecution(
+        ctx.body = await startExecution(
             ctx.ciApp,
             ctx.throw,
             ctx.req.traceId,

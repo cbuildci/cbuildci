@@ -126,7 +126,7 @@ module.exports = async function handlePullRequestEvent(ctx, ghEvent, repoConfig)
         }
     }
 
-    await startExecution(
+    ctx.body = await startExecution(
         ctx.ciApp,
         ctx.throw,
         ctx.req.traceId,
