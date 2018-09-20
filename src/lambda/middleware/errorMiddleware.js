@@ -7,11 +7,13 @@ module.exports = () => async (ctx, next) => {
         await next();
     }
     catch (err) {
-        if (err.status !== 404 && !err.expose) {
+        const status = err.status || err.statusCode;
+
+        if (status !== 404 && !err.expose) {
             ctx.logError(err.stack || err.toString());
         }
 
-        ctx.status = err.status || 500;
+        ctx.status = status || 500;
         const body = {};
 
         if (err.expose) {
