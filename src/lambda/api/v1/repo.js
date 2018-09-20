@@ -117,11 +117,10 @@ module.exports = koaRouter({
     prefix: '/:owner/:repo',
 })
     .get('/', async (ctx) => {
-        const token = (
-            await aws.decryptString(ctx.session.encryptedGithubAuthToken)
-        ).toString('utf8');
-
-        await verifyRepoAccess(token, ctx);
+        await verifyRepoAccess(
+            (await aws.decryptString(ctx.session.encryptedGithubAuthToken)).toString('utf8'),
+            ctx,
+        );
 
         const { owner, repo } = ctx.params;
 
@@ -147,11 +146,10 @@ module.exports = koaRouter({
     })
 
     .get('/commit/:commit', async (ctx) => {
-        const token = (
-            await aws.decryptString(ctx.session.encryptedGithubAuthToken)
-        ).toString('utf8');
-
-        await verifyRepoAccess(token, ctx);
+        await verifyRepoAccess(
+            (await aws.decryptString(ctx.session.encryptedGithubAuthToken)).toString('utf8'),
+            ctx,
+        );
 
         const { owner, repo, commit } = ctx.params;
 
@@ -214,21 +212,21 @@ module.exports = koaRouter({
         };
     })
 
-    .get('/commit/:commit/exec/:executionNum/stop', async (ctx) => {
+    .post('/commit/:commit/exec/:executionNum/action/stop', async (ctx) => {
+        await verifyRepoAccess(
+            (await aws.decryptString(ctx.session.encryptedGithubAuthToken)).toString('utf8'),
+            ctx,
+        );
+
         const execution = await getExecution(ctx);
 
-        const token = (
-            await aws.decryptString(ctx.session.encryptedGithubAuthToken)
-        ).toString('utf8');
-
-        await verifyRepoAccess(token, ctx, execution.meta.githubRepo.id);
-
-        if (!execution.state || !execution.state.isRunning || execution.state.errorInfo) {
-            ctx.throw(400, 'Execution is not running');
+        if (execution.meta.stop) {
+            ctx.throw(400, 'Execution stop has already been requested');
         }
 
-        if (execution.meta.stop) {
-            ctx.throw(400, 'Execution is already stopping');
+        // Check that the "stop" action is valid.
+        if (!execution.meta.actions.includes('stop')) {
+            ctx.throw(400, 'Execution does not allow "stop" action');
         }
 
         await aws.updateExecution(

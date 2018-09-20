@@ -315,6 +315,14 @@ exports.startExecution = async function startExecution(
         };
     }
 
+    const actions = [
+        {
+            label: 'Stop',
+            description: 'Stop the executions.',
+            identifier: 'stop',
+        },
+    ];
+
     // Create the execution record in the database.
     ciApp.logInfo(`Creating execution table item "${state.executionId}" for "${state.repoId}"...`);
     await aws.createExecution(
@@ -327,6 +335,7 @@ exports.startExecution = async function startExecution(
             githubOwner,
             githubRepo,
             event,
+            actions: actions.map(({ identifier }) => identifier),
             commit: {
                 author,
                 committer,
@@ -357,13 +366,7 @@ exports.startExecution = async function startExecution(
                 external_id: `${state.repoId}/${state.executionId}`,
                 status: 'queued',
                 started_at: Date.now(),
-                actions: [
-                    {
-                        label: 'Stop',
-                        description: 'Stop the builds.',
-                        identifier: 'stop',
-                    },
-                ],
+                actions,
             },
         );
 

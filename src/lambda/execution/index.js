@@ -141,6 +141,14 @@ async function executionHandler(state, ciApp, traceId) {
             }
         }
 
+        const actions = [
+            {
+                label: 'Re-Run',
+                description: 'Re-run the execution.',
+                identifier: 'rerun',
+            },
+        ];
+
         ciApp.logInfo('Updating execution table item...');
         await aws.updateExecution(
             ciApp.tableExecutionsName,
@@ -150,6 +158,9 @@ async function executionHandler(state, ciApp, traceId) {
                 status: 'COMPLETED',
                 conclusion,
                 state,
+                meta: {
+                    actions: actions.map(({ identifier }) => identifier),
+                },
             },
         );
 
@@ -168,17 +179,11 @@ async function executionHandler(state, ciApp, traceId) {
                     status: 'completed',
                     conclusion: checkRunConclusion,
                     completed_at: Date.now(),
+                    actions,
                     output: {
                         title,
                         summary: getExecutionSummary(state),
                     },
-                    actions: [
-                        {
-                            label: 'Re-Run',
-                            description: 'Re-run the builds.',
-                            identifier: 'rerun',
-                        },
-                    ],
                 },
             );
 
@@ -344,6 +349,16 @@ async function executionHandler(state, ciApp, traceId) {
         ciApp.logInfo('All builds for execution complete');
     }
 
+    const actions = [];
+
+    if (!state.stopRequested) {
+        actions.push({
+            label: 'Stop',
+            description: 'Stop the execution.',
+            identifier: 'stop',
+        });
+    }
+
     ciApp.logInfo('Updating execution table item...');
     const execution = await aws.updateExecution(
         ciApp.tableExecutionsName,
@@ -351,6 +366,7 @@ async function executionHandler(state, ciApp, traceId) {
         state.executionId,
         {
             state,
+            actions: actions.map(({ identifier }) => identifier),
         },
     );
 
@@ -378,16 +394,6 @@ async function executionHandler(state, ciApp, traceId) {
 
     if (state.checksRunId) {
         installationAccessToken = installationAccessToken || await getToken(state);
-
-        const actions = [];
-
-        if (!state.stopRequested) {
-            actions.push({
-                label: 'Stop',
-                description: 'Stop the builds.',
-                identifier: 'stop',
-            });
-        }
 
         ciApp.logInfo(`Updating check run "${state.checksName}"...`);
         const response = await github.updateCheckRun(
