@@ -72,6 +72,10 @@ const handler = ((koaCallback) => serverless((req, res) => {
                 throw err;
             });
         });
+}, {
+    request(request, event, context) {
+        request.traceId = `lambda:${context.logGroupName}:${context.logStreamName}:${context.awsRequestId}`;
+    },
 }))(koaApp.callback());
 
 // TODO: Remove
