@@ -75,7 +75,7 @@ exports.validateRepoConfig = v.top(
 /**
  * Validate a repo's YAML repo.
  *
- * @type {function}
+ * @method
  */
 exports.validateBuildsYml = v.top(
     isRequired(),
@@ -130,7 +130,7 @@ exports.validateBuildsYml = v.top(
  *
  * This is after merging in defaults from repo config and "defaults" in YAML.
  *
- * @type {function}
+ * @method
  */
 exports.validateBuildParams = v.top(
     isRequired(),
