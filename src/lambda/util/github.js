@@ -464,7 +464,15 @@ function getApiFailureError(response, baseMessage) {
         responseMessage = ` (Failed to stringify response body: ${err.message})`;
     }
 
-    return new Error(`${baseMessage} (code:${response.statusCode})${responseMessage}`);
+    const error = new Error(`${baseMessage} (code:${response.statusCode})${responseMessage}`);
+    error.statusCode = response.statusCode;
+
+    Object.defineProperty(error, 'getResponse', {
+        enumerable: false,
+        value: () => response,
+    });
+
+    return error;
 }
 
 exports.apiRequest = apiRequest;
