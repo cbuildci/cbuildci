@@ -1,9 +1,12 @@
 'use strict';
 
 const koaRouter = require('koa-router');
+const schema = require('../../../common/schema');
+const { INSTALLATION_TOKEN_CACHE } = require('../../../common/cache');
 const util = require('../../../common/util');
 const aws = require('../../util/aws');
 const github = require('../../util/github');
+const { startExecution } = require('../../util/startExecution');
 
 async function getExecution(ctx) {
     const repoId = util.buildRepoId(
@@ -58,6 +61,8 @@ async function verifyRepoAccess(token, ctx, githubRepoId = null) {
         ctx.logWarn(`User "${ctx.session.githubUser.login}" (${ctx.session.githubUser.id}) does not have write access to repo ${util.buildRepoId(owner, repo)}`);
         ctx.throw(404, 'Repository or execution not found');
     }
+
+    return repositoryResponse.data;
 }
 
 /**
@@ -245,6 +250,125 @@ module.exports = koaRouter({
 
         ctx.body = {
             message: 'success',
+        };
+    })
+
+    .post('/commit/:commit/exec/:executionNum/action/rerun', async (ctx) => {
+        const execution = await getExecution(ctx);
+
+        const repository = await verifyRepoAccess(
+            (await aws.decryptString(ctx.session.encryptedGithubAuthToken)).toString('utf8'),
+            ctx,
+            execution.meta.githubRepo.id,
+        );
+
+        if (!execution.meta.actions.includes('rerun')) {
+            ctx.throw(400, 'Execution does not allow "rerun" action');
+        }
+
+        const { owner, repo, commit } = ctx.params;
+
+        const repoId = util.buildRepoId(
+            owner,
+            repo,
+        );
+
+        ctx.logInfo(`Getting installation for ${repoId}...`);
+        let repoInstallation;
+        try {
+            repoInstallation = await github.getRepositoryInstallation(
+                ctx.ciApp.githubAppId,
+                ctx.ciApp.githubApiUrl,
+                async () => {
+                    // TODO: Should cache the GitHub App private key.
+                    ctx.logInfo('Getting GitHub App private key from SSM...');
+                    return Buffer.from(
+                        await aws.getSSMParam(ctx.ciApp.githubAppPrivateKeyParamName),
+                        'base64',
+                    );
+                },
+                owner,
+                repo,
+            );
+        }
+        catch (err) {
+            ctx.logError(`Failed to get installation for ${repoId} -- ${err.message}`);
+
+            if (err.statusCode === 404) {
+                ctx.throw(404, `No repo or repo config for ${repoId}`);
+            }
+            else {
+                ctx.throw(500, `Failed to get determine GitHub App installation for ${repoId}`);
+            }
+        }
+
+        // Load repo config.
+        ctx.logInfo(`Getting repo config for ${repoId}...`);
+
+        const fetchedConfig = await aws.getRepoConfig(
+            ctx.ciApp.tableConfigName,
+            repoId,
+        );
+
+        if (!fetchedConfig) {
+            ctx.throw(404, `No repo or repo config for ${repoId}`);
+        }
+
+        const repoConfig = schema.validateRepoConfig({
+            ...ctx.ciApp.globalRepoConfigDefaults,
+            ...fetchedConfig,
+        });
+
+        // Get the token to access GitHub.
+        ctx.logInfo(`Getting access token for installation ${repoInstallation.id}...`);
+        const {
+            token,
+            expires_at: tokenExpiration,
+        } = await github.getInstallationAccessToken(
+            ctx.ciApp.githubAppId,
+            ctx.ciApp.githubApiUrl,
+            async () => {
+                ctx.logInfo('Getting GitHub App private key from SSM...');
+                return Buffer.from(
+                    await aws.getSSMParam(ctx.ciApp.githubAppPrivateKeyParamName),
+                    'base64',
+                );
+            },
+            repoInstallation.id,
+            ctx.ciApp[INSTALLATION_TOKEN_CACHE],
+        );
+
+        const startResponse = await startExecution(
+            ctx.ciApp,
+            ctx.throw,
+            ctx.req.traceId,
+            token,
+            tokenExpiration,
+            repoConfig,
+            {
+                id: repository.owner.id,
+                login: repository.owner.login,
+                type: repository.owner.type,
+            },
+            {
+                id: repository.id,
+                name: repository.name,
+            },
+            {
+                type: 'rerun',
+                sender: {
+                    id: ctx.session.githubUser.id,
+                    login: ctx.session.githubUser.login,
+                    type: 'User',
+                },
+            },
+            repoInstallation.id,
+            commit,
+        );
+
+        ctx.body = {
+            ...util.parseRepoId(repoConfig.id),
+            ...util.parseExecutionId(startResponse.executionId),
         };
     })
 
