@@ -1,6 +1,7 @@
 'use strict';
 
 const util = require('../../../../common/util');
+const cacheUtil = require('../../../../common/cache');
 const schema = require('../../../../common/schema');
 const aws = require('../../../util/aws');
 const github = require('../../../util/github');
@@ -97,18 +98,22 @@ module.exports = async function handleCheckEvent(ctx, gitHubEventType, ghEvent, 
             token,
             expires_at: tokenExpiration,
         } = isForGitHubApp
-            ? await github.getInstallationAccessToken(
-                ctx.ciApp.githubAppId,
-                ctx.ciApp.githubApiUrl,
-                async () => {
-                    ctx.logInfo('Getting GitHub App private key from SSM...');
-                    return Buffer.from(
-                        await aws.getSSMParam(ctx.ciApp.githubAppPrivateKeyParamName),
-                        'base64',
-                    );
-                },
-                ghEvent.installation.id,
-                ctx.ciApp[webhookUtil.installationTokenCache],
+            ? await cacheUtil.getCachedValue(
+                ctx.ciApp[cacheUtil.INSTALLATION_TOKEN_CACHE],
+                `userToken:${exports.parseGitHubUrl(ctx.ciApp.githubApiUrl).hostname}/${ghEvent.installation.id}`,
+                (cached) => !exports.isTokenExpired(cached.expires_at),
+                () => github.getInstallationAccessToken(
+                    ctx.ciApp.githubAppId,
+                    ctx.ciApp.githubApiUrl,
+                    async () => {
+                        ctx.logInfo('Getting GitHub App private key from SSM...');
+                        return Buffer.from(
+                            await aws.getSSMParam(ctx.ciApp.githubAppPrivateKeyParamName),
+                            'base64',
+                        );
+                    },
+                    ghEvent.installation.id,
+                ),
             )
             : {
                 token: await aws.decryptString(repoConfig.encryptedOAuthToken),

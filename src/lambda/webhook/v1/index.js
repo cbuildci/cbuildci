@@ -4,10 +4,11 @@ const bodyParser = require('koa-bodyparser');
 const koaRouter = require('koa-router');
 const crypto = require('crypto');
 const util = require('../../../common/util');
+const cacheUtil = require('../../../common/cache');
 const schema = require('../../../common/schema');
 const aws = require('../../util/aws');
 const github = require('../../util/github');
-const webhookUtil = require('./util');
+const { validateRepositoryEvent } = require('./util');
 
 const handlePullRequestEvent = require('./events/pullRequest');
 const handleCheckEvent = require('./events/checks');
@@ -20,6 +21,22 @@ module.exports = koaRouter()
             ctx.throw(err.status || 400, `Invalid JSON body -- ${err.message}`);
         },
     }))
+    .use(async (ctx) => {
+        // Init cache GitHub app installation access tokens, if missing.
+        if (!ctx.ciApp[cacheUtil.INSTALLATION_TOKEN_CACHE]) {
+            ctx.ciApp[cacheUtil.INSTALLATION_TOKEN_CACHE] = {};
+            ctx.ciApp[cacheUtil.INSTALLATION_TOKEN_CACHE_LAST_PRUNE] = Date.now();
+        }
+
+        // Prune expired tokens from the cache.
+        else if (ctx.ciApp[cacheUtil.INSTALLATION_TOKEN_CACHE_LAST_PRUNE] + 300000 < Date.now()) {
+            cacheUtil.pruneCache(
+                ctx.ciApp[cacheUtil.INSTALLATION_TOKEN_CACHE],
+                (cached, key) => !key.startsWith('userToken:') || !github.isTokenExpired(cached.expires_at, 0),
+            );
+            ctx.ciApp[cacheUtil.INSTALLATION_TOKEN_CACHE_LAST_PRUNE] = Date.now();
+        }
+    })
     .post('/:repoId', async (ctx) => {
         await webhookRoute(ctx);
     });
@@ -29,23 +46,11 @@ async function webhookRoute(ctx) {
         ctx.throw(400, '"Content-Type" must be application/json');
     }
 
-    // Cache GitHub app installation access tokens
-    if (!ctx.ciApp[webhookUtil.installationTokenCache]) {
-        ctx.ciApp[webhookUtil.installationTokenCache] = {};
-        ctx.ciApp[webhookUtil.installationTokenCacheLastPrune] = Date.now();
-    }
-
     const ghEvent = ctx.request.body;
 
     // Verify the request body is an object.
     if (!ghEvent || typeof ghEvent !== 'object') {
         ctx.throw(400, 'Invalid event payload');
-    }
-
-    // Prune expired tokens from the cache.
-    if (ctx.ciApp[webhookUtil.installationTokenCacheLastPrune] + 300000 < Date.now()) {
-        github.pruneTokenCache(ctx.ciApp[webhookUtil.installationTokenCache]);
-        ctx.ciApp[webhookUtil.installationTokenCacheLastPrune] = Date.now();
     }
 
     const repoId = ctx.params.repoId;
@@ -123,7 +128,7 @@ async function webhookRoute(ctx) {
     }
     else {
         // Verify the event contains repository metadata.
-        webhookUtil.validateRepositoryEvent(ctx, ghEvent);
+        validateRepositoryEvent(ctx, ghEvent);
 
         const eventRepoId = util.buildRepoId(
             ghEvent.repository.owner.login,

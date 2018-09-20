@@ -26,35 +26,12 @@ exports.isTokenExpired = function isTokenExpired(expiresAt, bufferMS = 15000) {
     return expiresAt.getTime() <= Date.now();
 };
 
-exports.pruneTokenCache = function pruneTokenCache(cache) {
-    for (const [key, value] of Object.entries(cache)) {
-        if (!exports.isTokenExpired(value.expires_at, 0)) {
-            delete cache[key];
-        }
-    }
-};
-
 exports.getInstallationAccessToken = async function getInstallationAccessToken(
     githubAppId,
     githubApiUrl,
     appPrivateKey,
     installationId,
-    cache = null,
 ) {
-    const parsedUrl = exports.parseGitHubUrl(githubApiUrl);
-    const cached = cache && cache[`${parsedUrl.hostname}/${installationId}`];
-
-    if (cached) {
-        // Reuse the token if it is still valid.
-        if (!exports.isTokenExpired(cached.expires_at)) {
-            return cached;
-        }
-        else {
-            // Otherwise delete the cached token and get a new one.
-            delete cache[`${parsedUrl.hostname}/${installationId}`];
-        }
-    }
-
     const jwt = createJWT(
         githubAppId,
         typeof appPrivateKey === 'function'
@@ -78,10 +55,6 @@ exports.getInstallationAccessToken = async function getInstallationAccessToken(
 
     if (!response.data || !response.data.token) {
         throw new Error(`Failed to get installation access token (${response.data ? 'missing token' : 'no JSON data'})`);
-    }
-
-    if (cache) {
-        cache[`${parsedUrl.hostname}/${installationId}`] = response.data;
     }
 
     return response.data;

@@ -1,8 +1,5 @@
 'use strict';
 
-exports.installationTokenCache = Symbol('installationTokenCache');
-exports.installationTokenCacheLastPrune = Symbol('installationTokenCacheLastPrune');
-
 /**
  * Validate that an event contains repository metadata.
  *
