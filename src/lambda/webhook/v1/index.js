@@ -21,7 +21,7 @@ module.exports = koaRouter()
             ctx.throw(err.status || 400, `Invalid JSON body -- ${err.message}`);
         },
     }))
-    .use(async (ctx) => {
+    .use(async (ctx, next) => {
         // Init cache GitHub app installation access tokens, if missing.
         if (!ctx.ciApp[cacheUtil.INSTALLATION_TOKEN_CACHE]) {
             ctx.ciApp[cacheUtil.INSTALLATION_TOKEN_CACHE] = {};
@@ -36,6 +36,8 @@ module.exports = koaRouter()
             );
             ctx.ciApp[cacheUtil.INSTALLATION_TOKEN_CACHE_LAST_PRUNE] = Date.now();
         }
+
+        await next();
     })
     .post('/:repoId', async (ctx) => {
         await webhookRoute(ctx);

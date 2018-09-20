@@ -100,8 +100,8 @@ module.exports = async function handleCheckEvent(ctx, gitHubEventType, ghEvent, 
         } = isForGitHubApp
             ? await cacheUtil.getCachedValue(
                 ctx.ciApp[cacheUtil.INSTALLATION_TOKEN_CACHE],
-                `userToken:${exports.parseGitHubUrl(ctx.ciApp.githubApiUrl).hostname}/${ghEvent.installation.id}`,
-                (cached) => !exports.isTokenExpired(cached.expires_at),
+                `userToken:${github.parseGitHubUrl(ctx.ciApp.githubApiUrl).hostname}/${ghEvent.installation.id}`,
+                (cached) => !github.isTokenExpired(cached.expires_at),
                 () => github.getInstallationAccessToken(
                     ctx.ciApp.githubAppId,
                     ctx.ciApp.githubApiUrl,
