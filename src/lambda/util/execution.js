@@ -351,7 +351,7 @@ exports.startExecution = async function startExecution(
     );
 
     // Create a GitHub "Checks Run" for the commit, if supported.
-    if (isForGitHubApp && ciApp.githubUseChecks) {
+    if (isForGitHubApp) {
         ciApp.logInfo(`Creating check run "${state.checksName}"...`);
         const { commit, executionNum } = util.parseExecutionId(state.executionId);
         const response = await github.createCheckRun(

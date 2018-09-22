@@ -21,7 +21,6 @@ class CIApp {
         githubAppClientSecretParamName,
         githubAppHMACSecretParamName,
         githubAppPrivateKeyParamName,
-        githubUseChecks,
         sessionSecretsParamName,
         githubNoBuildLabels,
         globalBuildDefaults,
@@ -46,7 +45,6 @@ class CIApp {
         this.githubAppClientSecretParamName = githubAppClientSecretParamName;
         this.githubAppHMACSecretParamName = githubAppHMACSecretParamName;
         this.githubAppPrivateKeyParamName = githubAppPrivateKeyParamName;
-        this.githubUseChecks = githubUseChecks;
         this.sessionSecretsParamName = sessionSecretsParamName;
         this.githubNoBuildLabels = githubNoBuildLabels;
         this.globalBuildDefaults = globalBuildDefaults;
@@ -144,7 +142,6 @@ CIApp.create = (env) => {
             env.GH_NO_BUILD_LABELS
             || 'no build,no_build,no-build'
         ).toLowerCase().split(/\s*,\s*/g).filter(Boolean),
-        githubUseChecks: env.GITHUB_USE_CHECKS === 'true',
 
         globalRepoConfigDefaults: {
             waitSeconds: env.STATE_MACHINE_WAIT_SECONDS_DEFAULT,

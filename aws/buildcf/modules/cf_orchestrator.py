@@ -173,14 +173,6 @@ def create_template():
         Type = "String",
     ))
 
-    p_github_use_checks = t.add_parameter(Parameter(
-        "GitHubUseChecks",
-        Description = "Set to false to disable the use of GitHub Checks. See https://developer.github.com/v3/checks/",
-        Type = "String",
-        AllowedValues = ["true", "false"],
-        Default = "true",
-    ))
-
     p_session_secrets_param_name = t.add_parameter(Parameter(
         "SessionSecretsParamName",
         Description = "Comma delimited list of secrets used to sign session cookies.",
@@ -799,7 +791,6 @@ def create_template():
             "GH_APP_CLIENT_SECRET_PARAM_NAME": Ref(p_github_client_secret_param_name),
             "GH_APP_HMAC_SECRET_PARAM_NAME": Ref(p_github_webhook_secret_param_name),
             "GH_APP_PRIVATE_KEY_PARAM_NAME": Ref(p_github_app_private_key_param_name),
-            "GITHUB_USE_CHECKS": Ref(p_github_use_checks),
             "SESSION_SECRETS_PARAM_NAME": Ref(p_session_secrets_param_name),
             "SECRETS_KMS_ARN": If(
                 "DoCreateKMSKey",
