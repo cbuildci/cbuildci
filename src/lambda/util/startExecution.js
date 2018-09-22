@@ -318,7 +318,7 @@ exports.startExecution = async function startExecution(
     const actions = [
         {
             label: 'Stop',
-            description: 'Stop the executions.',
+            description: 'Stop the execution.',
             identifier: 'stop',
         },
     ];

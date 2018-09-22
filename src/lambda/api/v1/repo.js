@@ -249,7 +249,7 @@ module.exports = koaRouter({
         );
 
         ctx.body = {
-            message: 'success',
+            message: 'Requested Stop',
         };
     })
 
@@ -367,6 +367,7 @@ module.exports = koaRouter({
         );
 
         ctx.body = {
+            message: 'Execution Started',
             ...util.parseRepoId(repoConfig.id),
             ...util.parseExecutionId(startResponse.executionId),
         };
