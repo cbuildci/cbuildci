@@ -6,7 +6,7 @@ const { INSTALLATION_TOKEN_CACHE } = require('../../../common/cache');
 const util = require('../../../common/util');
 const aws = require('../../util/aws');
 const github = require('../../util/github');
-const { startExecution } = require('../../util/execution');
+const { startExecution, getExecutionJSON } = require('../../util/execution');
 
 async function getExecution(ctx) {
     const repoId = util.buildRepoId(
@@ -193,25 +193,7 @@ module.exports = koaRouter({
         );
 
         ctx.body = {
-            // Destruct the IDs into their parts.
-            ...util.parseRepoId(execution.repoId),
-            ...util.parseExecutionId(execution.executionId),
-
-            repoId: execution.repoId,
-            executionId: execution.executionId,
-            status: execution.status,
-            createTime: execution.createTime,
-            updateTime: execution.updateTime,
-            updates: execution.updates,
-            conclusion: execution.conclusion,
-            conclusionTime: execution.conclusionTime,
-            meta: execution.meta,
-            state: execution.state && {
-                isRunning: execution.state.isRunning,
-                errorInfo: execution.state.errorInfo,
-                commitSHA: execution.state.commitSHA,
-                builds: execution.state.builds,
-            },
+            ...getExecutionJSON(execution),
 
             // Include the access key (may be null).
             accessKey,

@@ -9,7 +9,7 @@ const util = require('../../common/util');
 const CIApp = require('../CIApp');
 const aws = require('../util/aws');
 const github = require('../util/github');
-const url = require('url');
+const { getExecutionActions } = require('../util/execution');
 
 const ciApp = CIApp.create(process.env);
 
@@ -141,16 +141,8 @@ async function executionHandler(state, ciApp, traceId) {
             }
         }
 
-        const actions = [
-            {
-                label: 'Re-Run',
-                description: 'Re-run the execution.',
-                identifier: 'rerun',
-            },
-        ];
-
         ciApp.logInfo('Updating execution table item...');
-        await aws.updateExecution(
+        const execution = await aws.updateExecution(
             ciApp.tableExecutionsName,
             state.repoId,
             state.executionId,
@@ -158,9 +150,6 @@ async function executionHandler(state, ciApp, traceId) {
                 status: 'COMPLETED',
                 conclusion,
                 state,
-                meta: {
-                    actions: actions.map(({ identifier }) => identifier),
-                },
             },
         );
 
@@ -179,7 +168,7 @@ async function executionHandler(state, ciApp, traceId) {
                     status: 'completed',
                     conclusion: checkRunConclusion,
                     completed_at: Date.now(),
-                    actions,
+                    actions: getExecutionActions(execution, true),
                     output: {
                         title,
                         summary: getExecutionSummary(state),
@@ -349,16 +338,6 @@ async function executionHandler(state, ciApp, traceId) {
         ciApp.logInfo('All builds for execution complete');
     }
 
-    const actions = [];
-
-    if (!state.stopRequested) {
-        actions.push({
-            label: 'Stop',
-            description: 'Stop the execution.',
-            identifier: 'stop',
-        });
-    }
-
     ciApp.logInfo('Updating execution table item...');
     const execution = await aws.updateExecution(
         ciApp.tableExecutionsName,
@@ -366,7 +345,6 @@ async function executionHandler(state, ciApp, traceId) {
         state.executionId,
         {
             state,
-            actions: actions.map(({ identifier }) => identifier),
         },
     );
 
@@ -405,11 +383,11 @@ async function executionHandler(state, ciApp, traceId) {
             state.checksName,
             {
                 status: 'in_progress',
+                actions: getExecutionActions(execution, true),
                 output: {
                     title: state.stopRequested ? 'Stopping...' : 'Running builds...',
                     summary: getExecutionSummary(state),
                 },
-                actions,
             },
         );
 

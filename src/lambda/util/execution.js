@@ -7,6 +7,60 @@ const schema = require('../../common/schema');
 const aws = require('./aws');
 const github = require('./github');
 
+exports.getExecutionActions = function getExecutionActions(execution, forGitHubApp = false) {
+    const actions = [];
+
+    if (execution.conclusion) {
+        actions.push(
+            forGitHubApp
+                ? {
+                    label: 'Re-Run',
+                    description: 'Re-run the execution.',
+                    identifier: 'rerun',
+                }
+                : 'rerun'
+        );
+    }
+    else if (!execution.meta.stop) {
+        actions.push(
+            forGitHubApp
+                ? {
+                    label: 'Stop',
+                    description: 'Stop the execution.',
+                    identifier: 'stop',
+                }
+                : 'stop'
+        );
+    }
+
+    return actions;
+};
+
+exports.getExecutionJSON = function getExecutionJSON(execution) {
+    return {
+        // Destruct the IDs into their parts.
+        ...util.parseRepoId(execution.repoId),
+        ...util.parseExecutionId(execution.executionId),
+
+        repoId: execution.repoId,
+        executionId: execution.executionId,
+        status: execution.status,
+        createTime: execution.createTime,
+        updateTime: execution.updateTime,
+        updates: execution.updates,
+        conclusion: execution.conclusion,
+        conclusionTime: execution.conclusionTime,
+        meta: execution.meta,
+        actions: exports.getExecutionActions(execution),
+        state: execution.state && {
+            isRunning: execution.state.isRunning,
+            errorInfo: execution.state.errorInfo,
+            commitSHA: execution.state.commitSHA,
+            builds: execution.state.builds,
+        },
+    };
+};
+
 exports.startExecution = async function startExecution(
     ciApp,
     throwError,
@@ -315,17 +369,9 @@ exports.startExecution = async function startExecution(
         };
     }
 
-    const actions = [
-        {
-            label: 'Stop',
-            description: 'Stop the execution.',
-            identifier: 'stop',
-        },
-    ];
-
     // Create the execution record in the database.
     ciApp.logInfo(`Creating execution table item "${state.executionId}" for "${state.repoId}"...`);
-    await aws.createExecution(
+    const execution = await aws.createExecution(
         ciApp.tableExecutionsName,
         state.repoId,
         state.executionId,
@@ -335,7 +381,6 @@ exports.startExecution = async function startExecution(
             githubOwner,
             githubRepo,
             event,
-            actions: actions.map(({ identifier }) => identifier),
             commit: {
                 author,
                 committer,
@@ -366,7 +411,7 @@ exports.startExecution = async function startExecution(
                 external_id: `${state.repoId}/${state.executionId}`,
                 status: 'queued',
                 started_at: Date.now(),
-                actions,
+                actions: exports.getExecutionActions(execution, true),
             },
         );
 
