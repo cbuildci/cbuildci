@@ -519,6 +519,7 @@ exports.createExecution = async function createExecution(
             status: 'QUEUED',
             createTime: new Date().toISOString(),
             updateTime: new Date().toISOString(),
+            updates: 0,
             conclusion: null,
             conclusionTime: null,
             meta,
@@ -542,9 +543,10 @@ exports.updateExecution = async function updateExecution(
     } = {},
     serviceParams = {},
 ) {
-    let UpdateExpression = 'SET #updateTime = :updateTime';
+    let UpdateExpression = 'SET #updateTime = :updateTime, #updates = #updates + 1';
     const ExpressionAttributeNames = {
         '#updateTime': 'updateTime',
+        '#updates': 'updates',
     };
     const ExpressionAttributeValues = {
         ':updateTime': new Date().toISOString(),
