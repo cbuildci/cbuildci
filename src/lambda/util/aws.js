@@ -545,13 +545,14 @@ exports.updateExecution = async function updateExecution(
     } = {},
     serviceParams = {},
 ) {
-    let UpdateExpression = 'SET #updateTime = :updateTime, #updates = #updates + 1';
+    let UpdateExpression = 'SET #updateTime = :updateTime, #updates = #updates + :one';
     const ExpressionAttributeNames = {
         '#updateTime': 'updateTime',
         '#updates': 'updates',
     };
     const ExpressionAttributeValues = {
         ':updateTime': new Date().toISOString(),
+        ':one': 1,
     };
 
     if (status) {

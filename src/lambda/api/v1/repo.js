@@ -6,7 +6,7 @@ const { INSTALLATION_TOKEN_CACHE } = require('../../../common/cache');
 const util = require('../../../common/util');
 const aws = require('../../util/aws');
 const github = require('../../util/github');
-const { startExecution, getExecutionJSON } = require('../../util/execution');
+const { startExecution, getExecutionActions, getExecutionJSON } = require('../../util/execution');
 
 async function getExecution(ctx) {
     const repoId = util.buildRepoId(
@@ -206,18 +206,18 @@ module.exports = koaRouter({
             ctx,
         );
 
-        const execution = await getExecution(ctx);
+        let execution = await getExecution(ctx);
 
         if (execution.meta.stop) {
             ctx.throw(400, 'Execution stop has already been requested');
         }
 
         // Check that the "stop" action is valid.
-        if (!execution.meta.actions.includes('stop')) {
+        if (!getExecutionActions(execution).includes('stop')) {
             ctx.throw(400, 'Execution does not allow "stop" action');
         }
 
-        await aws.updateExecution(
+        execution = await aws.updateExecution(
             ctx.ciApp.tableExecutionsName,
             execution.repoId,
             execution.executionId,
@@ -246,7 +246,7 @@ module.exports = koaRouter({
             execution.meta.githubRepo.id,
         );
 
-        if (!execution.meta.actions.includes('rerun')) {
+        if (!getExecutionActions(execution).includes('rerun')) {
             ctx.throw(400, 'Execution does not allow "rerun" action');
         }
 
