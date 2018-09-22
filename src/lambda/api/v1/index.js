@@ -20,6 +20,7 @@ module.exports = koaRouter()
                 searchByRepoUrl: `${ctx.ciApp.baseUrl}/api/v1/repo/{owner}/{repo}`,
                 searchByCommitUrl: `${ctx.ciApp.baseUrl}/api/v1/repo/{owner}/{repo}/commit/{commit}`,
                 getExecutionUrl: `${ctx.ciApp.baseUrl}/api/v1/repo/{owner}/{repo}/commit/{commit}/exec/{executionNum}`,
+                executionActionUrl: `${ctx.ciApp.baseUrl}/api/v1/repo/{owner}/{repo}/commit/{commit}/exec/{executionNum}/action/{actionRequested}`,
                 getExecutionBuildLogsUrl: `${ctx.ciApp.baseUrl}/api/v1/repo/{owner}/{repo}/commit/{commit}/exec/{executionNum}/build/{buildKey}/logs?limit={limit}&nextToken={nextToken}`,
                 authRedirectUrl: `${ctx.ciApp.baseUrl}/api/v1/auth/redirect?returnTo={url}`,
                 logoutUrl: `${ctx.ciApp.baseUrl}/api/v1/auth/logout?redirect={url}`,
