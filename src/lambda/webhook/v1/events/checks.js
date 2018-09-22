@@ -6,7 +6,7 @@ const schema = require('../../../../common/schema');
 const aws = require('../../../util/aws');
 const github = require('../../../util/github');
 const webhookUtil = require('../util');
-const { startExecution } = require('../../../util/startExecution');
+const { startExecution } = require('../../../util/execution');
 
 /**
  * @param {object} ctx

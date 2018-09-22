@@ -6,7 +6,7 @@ const { INSTALLATION_TOKEN_CACHE } = require('../../../common/cache');
 const util = require('../../../common/util');
 const aws = require('../../util/aws');
 const github = require('../../util/github');
-const { startExecution } = require('../../util/startExecution');
+const { startExecution } = require('../../util/execution');
 
 async function getExecution(ctx) {
     const repoId = util.buildRepoId(
