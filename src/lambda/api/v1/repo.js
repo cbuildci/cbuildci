@@ -233,6 +233,7 @@ module.exports = koaRouter({
 
         ctx.body = {
             message: 'Requested Stop',
+            execution: getExecutionJSON(execution),
         };
     })
 
