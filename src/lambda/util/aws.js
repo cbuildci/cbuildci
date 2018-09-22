@@ -511,24 +511,26 @@ exports.createExecution = async function createExecution(
         service: dynamoDB,
     });
 
-    const response = await documentClient.put({
+    const Item = {
+        repoId,
+        executionId,
+        status: 'QUEUED',
+        createTime: new Date().toISOString(),
+        updateTime: new Date().toISOString(),
+        updates: 0,
+        conclusion: null,
+        conclusionTime: null,
+        meta,
+        state,
+    };
+
+    await documentClient.put({
         TableName: tableName,
-        Item: {
-            repoId,
-            executionId,
-            status: 'QUEUED',
-            createTime: new Date().toISOString(),
-            updateTime: new Date().toISOString(),
-            updates: 0,
-            conclusion: null,
-            conclusionTime: null,
-            meta,
-            state,
-        },
+        Item,
         ConditionExpression: 'attribute_not_exists(executionId)',
     }).promise();
 
-    return response.Attributes;
+    return Item;
 };
 
 exports.updateExecution = async function updateExecution(
