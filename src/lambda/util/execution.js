@@ -397,6 +397,7 @@ exports.startExecution = async function startExecution(
 
     // Create a GitHub "Checks Run" for the commit, if supported.
     if (isForGitHubApp) {
+        state.startedAt = Date.now();
         ciApp.logInfo(`Creating check run "${state.checksName}"...`);
         const { commit, executionNum } = util.parseExecutionId(state.executionId);
         const response = await github.createCheckRun(
@@ -410,7 +411,7 @@ exports.startExecution = async function startExecution(
                 details_url: `${ciApp.baseUrl}/app/repo/${state.repoId}/commit/${commit}/exec/${executionNum}`,
                 external_id: `${state.repoId}/${state.executionId}`,
                 status: 'queued',
-                started_at: Date.now(),
+                started_at: state.startedAt,
                 actions: exports.getExecutionActions(execution, true),
             },
         );
