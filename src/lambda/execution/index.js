@@ -166,6 +166,7 @@ async function executionHandler(state, ciApp, traceId) {
                 state.checksName,
                 {
                     status: 'completed',
+                    started_at: state.startedAt.getTime(),
                     conclusion: checkRunConclusion,
                     completed_at: Date.now(),
                     actions: getExecutionActions(execution, true),
